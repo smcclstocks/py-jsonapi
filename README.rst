@@ -32,7 +32,7 @@ License
 -------
 
 This library is licensed under the
-[GNU Affero General Public License v3](./LICENSE).
+`GNU Affero General Public License v3 <./LICENSE>`_.
 
 
 Contributions and questions
