@@ -19,6 +19,7 @@
 # third party
 import tornado
 import tornado.web
+import tornado.gen
 
 # local
 import jsonapi
@@ -41,7 +42,8 @@ class Handler(tornado.web.RequestHandler):
         self.jsonapi = jsonapi
         return None
 
-    async def prepare(self):
+    @tornado.gen.coroutine
+    def prepare(self):
         """
         .. hint::
 
@@ -49,7 +51,7 @@ class Handler(tornado.web.RequestHandler):
             a better way.
         """
         # Transform the request
-        request = base.Request(
+        request = jsonapi.base.Request(
             self.jsonapi, self.request.uri, self.request.method,
             self.request.headers, self.request.body
         )
@@ -109,7 +111,7 @@ class TornadoAPI(jsonapi.base.api.API):
     def __init__(self, uri, settings=None, tornado_app=None):
         """
         """
-        super().__init__(uri=uri, debug=debug, settings=settings)
+        super().__init__(uri=uri, settings=settings)
 
         self._tornado_app = None
         if tornado_app is not None:
@@ -153,5 +155,5 @@ class TornadoAPI(jsonapi.base.api.API):
         url_rule = tornado.web.url(
             self.uri + "/.*", Handler, dict(jsonapi=self), name="jsonapi"
         )
-        tornado_app.add_handlers(".*", [ur_rule])
+        app.add_handlers(".*", [url_rule])
         return None
