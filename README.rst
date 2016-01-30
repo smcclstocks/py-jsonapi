@@ -7,7 +7,8 @@ py-jsonapi
     soon.
     If you have any suggestions or found bugs, please create a new issue.
 
-This library is a toolkit for building http://jsonapi.org/ compliant apis. It
+
+This library is a toolkit for building a http://jsonapi.org/ compliant API. It
 has built in support for many web frameworks and database drivers:
 
 *   flask
