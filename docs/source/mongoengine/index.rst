@@ -4,9 +4,10 @@ MongoEngine
 .. toctree::
     :maxdepth: 1
 
-    how_to
+    tutorial
     api
 
 
 This package contains a database adapter and a serializer for
-`mongoengine <http://mongoengine.org>`_ models.
+`mongoengine <http://mongoengine.org>`_ models. If you have a mongoengine
+document, this serializer is your first choice.

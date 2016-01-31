@@ -19,6 +19,14 @@
 """
 jsonapi.marker.markup
 =====================
+
+This module contains the base for the attribute and relationships fields and
+the base markup.
+
+.. seealso::
+
+    *   :mod:`jsonapi.marker.method` for the method decorators
+    *   :mod:`jsonapi.marker.property` for the property decorators
 """
 
 __all__ = [
@@ -142,9 +150,9 @@ class ToManyRelationship(BaseRelationship):
 
     def extend(self, resource, relatives):
         """
-        **Can be overridden** for performance reasons.
+        **Can be overridden**
 
-        Adds the *relatives* to the relationship.
+        Adds all *relatives* to the relationship.
         """
         for relative in relatives:
             self.add(resource, relative)
@@ -223,27 +231,41 @@ class Markup(object):
     def __init__(self, model, typename=None):
         """
         """
-        #: The resource class
         self.model = model
+        """The resource class"""
 
-        #: The typename of the resource class in the API
         self.typename = model.__name__ if typename is None else typename
+        """
+        The typename of the resource class in the API.
+        """
 
-        #: The constructor. If we do not find one, we will later assume
-        #: the default __init__ function.
         self.constructor = None
+        """
+        The :class:`Constructor` marker, which can be used to create new
+        instances of the resource. If no constructor is defined on the model,
+        the default `__init__` method is used.
+        """
 
-        #: The id attribute getter
         self.id_attribute = None
+        """The :class:`IDAttribute` marker."""
 
-        #: Contains all attribute markers.
         self.attributes = dict()
+        """
+        A dictionary, which maps the attributes names to the :class:`Attribute`
+        instance.
+        """
 
         #: The relationship markers.
         self.relationships = dict()
+        """
+        A dictionary, which maps the relationhip names to the
+        :class:`ToOneRelationship` or :class:`ToManyRelationship`.
+        """
 
-        #: Contains all field names.
         self.fields = set()
+        """
+        Contains the names of all attributes and relationships.
+        """
 
         self.find_markers()
         return None

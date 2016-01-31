@@ -5,11 +5,12 @@ import datetime
 
 # third party
 import sqlalchemy
-import sqlalchemy.ext.declarative
 import sqlalchemy.orm
+import sqlalchemy.ext.declarative
+
+import jsonapi
 
 
-Base = sqlalchemy.ext.declarative.declarative_base()
 
 
 class User(Base):
@@ -17,11 +18,16 @@ class User(Base):
     __tablename__ = "users"
 
     id = sqlalchemy.Column(sqlalchemy.Integer, primary_key=True)
-    email = sqlalchemy.Column("email", sqlalchemy.String(50))
+    name = sqlalchemy.Column("name", sqlalchemy.String(50))
+    birthdate = sqlalchemy.Column("birthdate", sqlalchemy.DateTime())
     date_added = sqlalchemy.Column(
         "date_added", sqlalchemy.DateTime(),
         default=datetime.datetime.utcnow
     )
+
+    @jsonapi.marker.method.Attribute()
+    def age(self):
+        return datetime.datetime.utcnow() - self.birthdate
 
 
 class Post(Base):

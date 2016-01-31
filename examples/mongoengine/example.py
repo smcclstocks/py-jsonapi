@@ -4,7 +4,6 @@ import mongoengine
 
 import jsonapi
 import jsonapi.mongoengine
-import jsonapi.marker
 
 
 class User(mongoengine.Document):

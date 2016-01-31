@@ -285,9 +285,6 @@ class ToManyRelationship(BaseMarker, markup.ToManyRelationship):
     :arg name:
     """
 
-    to_one = False
-    to_many = True
-
     def __init__(
         self, fget=None, fset=None, fdel=None, fadd=None, fextend=None,
         frem=None, doc=None, name=None

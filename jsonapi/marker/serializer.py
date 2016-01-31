@@ -28,9 +28,14 @@ from collections import OrderedDict
 from .. import base
 
 
+__all__ = [
+    "Serializer"
+]
+
+
 class Serializer(base.Serializer):
     """
-    Serializes a resource based on the *markup*.
+    Implements the base serializer using a *Markup*.
 
     :arg jsonapi.marker.markup.Markup markup:
     :arg jsonapi.base.api.API api:
