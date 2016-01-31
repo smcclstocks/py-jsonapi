@@ -55,7 +55,7 @@ class RelatedHandler(BaseHandler):
             raise errors.NotFound()
 
         # Make sure, the content type is valid.
-        if self.request.media_type != "application/vnd.api+json":
+        if self.request.content_type[0] != "application/vnd.api+json":
             raise errors.UnsupportedMediaType()
 
         # Load the resource.
