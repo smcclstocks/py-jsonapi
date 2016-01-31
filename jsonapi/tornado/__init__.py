@@ -52,8 +52,8 @@ class Handler(tornado.web.RequestHandler):
         """
         # Transform the request
         request = jsonapi.base.Request(
-            self.jsonapi, self.request.uri, self.request.method,
-            self.request.headers, self.request.body
+            self.request.uri, self.request.method, self.request.headers,
+            self.request.body
         )
 
         # Let the API handle it.

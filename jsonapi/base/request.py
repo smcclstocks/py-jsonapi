@@ -108,7 +108,7 @@ class Request(object):
         :seealso: https://www.w3.org/Protocols/rfc1341/4_Content-Type.html
         """
         content_type = self.headers.get("content-type", "")
-        type_, *parameters = values.split(";")
+        type_, *parameters = content_type.split(";")
 
         for i, parameter in enumerate(parameters):
             parameter = parameter.split("=", 1)
@@ -117,7 +117,7 @@ class Request(object):
                     .format(parameter)
                 raise errors.BadRequest(detail=detail)
             parameters[i] = parameter
-        return (type_, dict(paramters))
+        return (type_, dict(parameters))
 
     @cached_property
     def japi_page_number(self):

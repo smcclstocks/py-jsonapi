@@ -173,7 +173,7 @@ class DatabaseSession(base.database.DatabaseSession):
         """
         Maps the arguments to a sqlalchemy query object and returns it.
         """
-        model = self.api.model_by_type(typename)
+        model = self.api.get_model(typename)
         markup = self.api.get_markup(typename)
 
         query = self.sqla_session.query(model)
@@ -217,7 +217,7 @@ class DatabaseSession(base.database.DatabaseSession):
         """
         """
         typename, resource_id = identifier
-        model = self.api.model_by_type(typename)
+        model = self.api.get_model(typename)
         resource = self.sqla_session.query(model).get(resource_id)
         return resource
 

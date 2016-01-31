@@ -127,8 +127,8 @@ class DatabaseSession(base.database.DatabaseSession):
         ):
         """
         """
-        model = self.api.model_by_type(typename)
-        markup = self.api.markup_by_type(typename)
+        model = self.api.get_model(typename)
+        markup = self.api.get_markup(typename)
 
         if filters:
             filters = self._build_filter_criterion(markup, filters)
@@ -172,7 +172,7 @@ class DatabaseSession(base.database.DatabaseSession):
         """
         """
         typename, resource_id = identifier
-        model = self.api.model_by_type(typename)
+        model = self.api.get_model(typename)
         resource = model.objects(id=resource_id).first()
         return resource
 
@@ -184,7 +184,7 @@ class DatabaseSession(base.database.DatabaseSession):
         # Group the identifiers by the typenames.
         group_key = lambda identifier: identifier[0]
         for typename, identifiers in groupby(identifiers, group_key):
-            model = self.api.model_by_type(typename)
+            model = self.api.get_model(typename)
             markup = self.api.get_markup(typename)
 
             # Extract the resource ids, fetch the resources and add them

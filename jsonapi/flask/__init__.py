@@ -132,7 +132,7 @@ class FlaskAPI(jsonapi.base.api.API):
         """
         Handles a request to the API.
         """
-        req = get_request(self)
+        req = get_request()
         resp = super().handle_request(req)
         return to_response(resp)
 
