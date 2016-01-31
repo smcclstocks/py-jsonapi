@@ -21,18 +21,20 @@ jsonapi.base.database
 =====================
 
 This module defines some abstract classes, which provide a common interface
-for using a database.
+for using databse methods required in a JSONapi flow.
 
 If you need to implement your own database adapter, you have to subclass
-:class:`Database` and :class:`DatabaseSession`.
+:class:`Database` and :class:`DatabaseSession` according to their documentation.
 """
 
 # std
 from itertools import groupby
+import logging
 
 # local
 from . import utilities
 from . import errors
+from . import validators
 
 
 __all__ = [
@@ -42,9 +44,12 @@ __all__ = [
 ]
 
 
+LOG = logging.getLogger(__file__)
+
+
 class Database(object):
     """
-    This class defines the base for a database adapter. It is purely abstract.
+    This class defines the base for a database adapter.
 
     :arg jsonapi.base.api.API api:
         The api, which uses this database
@@ -144,11 +149,8 @@ class DatabaseSession(object):
 
                 *   :attr:`jsonapi.base.request.Request.japi_filters`
 
-        :raises UnsortableField:
-            If the results can not be ordered by a field values.
-        :raises UnsupportedFilter:
-            If a filtername does not exist or is not supported on a
-            specific field.
+        :raises errors.UnsortableField:
+        :raises errors.UnfilterableField:
         """
         raise NotImplementedError()
 
@@ -243,7 +245,7 @@ class BulkSession(object):
         self.api = api
 
         # Maps the database adapter to the database session.
-        self.sessions = dict()
+        self._sessions = dict()
         return None
 
     def session(self, typename):
@@ -261,9 +263,9 @@ class BulkSession(object):
             *   :meth:`Database.session`
         """
         db = self.api.get_db(typename)
-        if not db in self.sessions:
-            self.sessions[db] = db.session()
-        return self.sessions[db]
+        if not db in self._sessions:
+            self._sessions[db] = db.session()
+        return self._sessions[db]
 
     def session_by_db(self, db):
         """
@@ -277,9 +279,9 @@ class BulkSession(object):
 
             *   :meth:`Database.session`
         """
-        if not db in self.sessions:
-            self.sessions[db] = db.session()
-        return self.sessions[db]
+        if not db in self._sessions:
+            self._sessions[db] = db.session()
+        return self._sessions[db]
 
     def query(self, typename,
         *, order=None, limit=None, offset=None, filters=None
@@ -332,12 +334,18 @@ class BulkSession(object):
         """
         *include_paths* is a list of include paths. An include path is a
         list of relationship names, starting with a relationship defined on
-        the *resources*:
+        the *resources*.
+
+        E.g.: The *article* resource class has a relationship called *comments*
+        and *author*. The *comment* class itself has a relationship *author*:
 
         .. code-block:: python3
 
-            ("comments", "author")
-            ("related_articles")
+            # Include the authors of the comments related to the articles.
+            ["comments", "author"]
+
+            # Include the authors of the articles.
+            ["author"]
 
         This method follow the include paths and returns a dictionary, which
         contains all related resources on every include path.
@@ -352,12 +360,31 @@ class BulkSession(object):
             *   :attr:`jsonapi.base.request.Request.japi_include`
             *   http://jsonapi.org/format/#fetching-includes
 
-        .. todo:: Optimize this method
-        """
-        # include_paths may be None
-        if not include_paths:
-            return dict()
+        .. todo::
 
+            This method can be more efficient: Walk done the include paths
+            simultaneous instead one by one. For example:
+
+            .. code-block:: python3
+
+                ["comments", "author"]
+                ["author"]
+
+            Wished behaviour: (2 calls of *get_many()*)
+
+            1. Get the ids of the comments and the article authors
+            2. Load these ids
+            3. Get the ids of the comment authors
+
+            Current behaviour: (3 calls of *get_many()*)
+
+            1. Get the ids of the comments
+            2. Load the comments
+            3. Get the ids of the comment authors
+            4. Load the comment authors
+            5. Get the ids of the article authors
+            6. Load the article authors
+        """
         result = dict()
         for include_path in include_paths:
 
@@ -399,7 +426,7 @@ class BulkSession(object):
                 curr_resources = list(relatives.values())
         return result
 
-    def load_japi_relationships(self, rel_obj):
+    def load_japi_relationships(self, rel_doc):
         """
         Loads the relationships based upon a JSONapi relationships object:
 
@@ -429,33 +456,42 @@ class BulkSession(object):
                 "publisher": None
             }
 
-        :arg dict rel_obj:
+        :arg dict rel_doc:
         """
-        # Collect all resource ids.
-        ids = utilities.collect_identifiers(rel_obj)
+        # Collect all ids.
+        ids = set()
+        for relname in relobj.keys():
+            reldata = relobj[relname].get("data")
+            if isinstance(reldata, dict):
+                ids.add((reldata["type"], reldata["id"]))
+            elif isinstance(reldata, list):
+                ids.update(
+                    (item["type"], item["id"]) for item in reldata
+                )
 
-        # Query the related resources.
-        resources = self.get_many(ids)
+        # Query the resources.
+        relatives = self.get_many(ids)
 
-        # Map the relationship name to the related resources.
-        relatives = dict()
-        for rel_name in rel_obj.keys():
-            rel_data = rel_obj[rel_name]["data"]
-            # to-many relationship
-            if isinstance(rel_data, list):
-                relatives[rel_name] = [
-                    resources[(item["type"], item["id"])]\
-                    for item in rel_data
+        # Map the relationships to the related resources.
+        result = dict()
+        for relname in relobj.keys():
+            # Skip the relationship, if the *data* dictionary is not present.
+            if not "data" in relobj[relname]:
+                continue
+
+            reldata = relobj[relname]["data"]
+            if reldata is None:
+                result[relname] = None
+            elif isinstance(reldata, dict):
+                result[relname] = relatives.get(
+                    (reldata["type"], reldata["id"])
+                )
+            elif isinstance(reldata, list):
+                result[relname] = [
+                    relatives.get((item["type"], item["id"])) \
+                    for item in reldata
                 ]
-            # to-one relationship
-            else:
-                if rel_data is None:
-                    relatives[rel_name] = None
-                else:
-                    relatives[rel_name] = resources[
-                        (rel_data["type"], rel_data["id"])
-                    ]
-        return relatives
+        return result
 
     def save(self, resources):
         """
@@ -489,6 +525,6 @@ class BulkSession(object):
         """
         :seealso: :meth:`DatabaseSession.commit`
         """
-        for session in self.sessions.values():
+        for session in self._sessions.values():
             session.commit()
         return None

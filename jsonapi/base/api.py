@@ -19,10 +19,6 @@
 """
 jsonapi.base.api
 ================
-
-This module contains the API class. It dispatches the requests and know all
-available resource types. When you want to integrate *py-jsonapi* in a new
-web framework, you will have to subclass :class:`API`.
 """
 
 # std
@@ -58,8 +54,8 @@ ARG_DEFAULT = []
 
 class API(object):
     """
-    This class works as container for all resource types, serializers and
-    manages the request handling.
+    This class is responsible for the request dispatching. It knows all
+    resource classes, typenames, serializers and database adapter.
 
     :arg str uri:
         The root uri of the whole API.
@@ -111,7 +107,7 @@ class API(object):
         """
         True, if the API is in debug mode.
 
-        This value can be overridden in subclasses to mimic the behaviour of
+        This value **can be overridden** in subclasses to mimic the behaviour of
         the parent web framework.
         """
         return self._debug
@@ -129,7 +125,7 @@ class API(object):
         relationships = resource + "/relationships/(?P<relname>[A-z][A-z0-9]*)"
         related = resource + "/(?P<relname>[A-z][A-z0-9]*)"
 
-        # Make the rules resistant against a trailing "/"
+        # Make the rules insensitive against a trailing "/"
         collection = re.compile(collection + "/?")
         resource = re.compile(resource + "/?")
         relationships = re.compile(relationships + "/?")
@@ -168,6 +164,7 @@ class API(object):
 
         :arg str typename:
         :arg default:
+            A fallback value, if the typename does not exist.
         :raises KeyError:
             If the typename does not exist and no default argument is given.
         """
@@ -183,6 +180,7 @@ class API(object):
 
         :arg str typename:
         :arg default:
+            A fallback value, if the typename does not exist.
         :raises KeyError:
             If the typename is not associated with a markup and no default
             argument is given.
@@ -198,6 +196,7 @@ class API(object):
 
         :arg str typename:
         :arg default:
+            A fallback value, if the typename does not exist.
         :raises KeyError:
             If the typename does not exist and no default argument is given.
         """
@@ -211,8 +210,9 @@ class API(object):
         Returns the typename of the object *o*.
 
         :arg o:
-            A model (resource class) or a resource
+            A resource class or a resource
         :arg default:
+            A fallback value, if the typename can not be retrieved.
         :raises KeyError:
             If the resource type of *o* is not known to the API and no default
             argument is given.
@@ -232,6 +232,15 @@ class API(object):
             A list with all typenames known to the API.
         """
         return list(self._typenames.values())
+
+    def has_typename(self, typename):
+        """
+        :arg str typename:
+
+        :rtype: bool
+        :returns: True, if an type with the *typename* exists.
+        """
+        return typename in self._typenames
 
 
     def dump_json(self, d):
@@ -339,6 +348,8 @@ class API(object):
 
         :arg jsonapi.base.serializer.Serializer serializer:
         :arg jsonapi.base.database.Database db:
+            The database adapter, which is used to load resource of the type
+            ``serializer.model``.
         """
         typename = serializer.typename
         model = serializer.model
@@ -359,9 +370,9 @@ class API(object):
             self._markups[typename] = serializer.markup
         return None
 
-    def find_handler(self, request):
+    def _find_handler(self, request):
         """
-        Parses the :attr:`request.uri` and returns the handler for this
+        Parses the :attr:`request.uri` and returns the handler for the requested
         endpoint.
 
         Arguments decoded in the uri (like the resource id or relationship name)
@@ -369,7 +380,7 @@ class API(object):
 
         :arg jsonapi.base.request.Request request:
         :rtype: jsonapi.base.handler.base_handler.BaseHandler:
-        :raises NotFound:
+        :raises jsonapi.base.errors.NotFound:
             If the :attr:`request.uri` is not a valid API endpoint.
         """
         for uri_re, HandlerType in self._routes:
@@ -386,8 +397,11 @@ class API(object):
         :arg jsonapi.base.request.Request request:
         :rtype: jsonapi.base.response.Response
         """
+        assert request.api is None or request.api is self
+        request.api = self
+
         try:
-            HandlerType = self.find_handler(request)
+            HandlerType = self._find_handler(request)
             handler = HandlerType(self, request)
 
             handler.prepare()

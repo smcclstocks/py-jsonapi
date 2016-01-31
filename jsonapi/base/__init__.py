@@ -21,9 +21,8 @@ from . import handler
 from . import api
 from . import database
 from . import errors
-from . import utilities
-from . import validators
-
 from .request import Request
 from .response import Response
 from .serializer import Serializer
+from . import utilities
+from . import validators

@@ -24,7 +24,7 @@ import flask
 import werkzeug
 
 # local
-from jsonapi import base
+import jsonapio
 
 
 __all__ = [
@@ -33,10 +33,10 @@ __all__ = [
 ]
 
 
-log = logging.getLogger(__file__)
+LOG = logging.getLogger(__file__)
 
 
-def get_request(api):
+def get_request():
     """
     Transforms the current flask request object in to a jsonapi request object.
     """
@@ -47,7 +47,7 @@ def get_request(api):
     method = flask.request.method
     headers = dict(flask.request.headers)
     body = flask.request.get_data()
-    return base.Request(api, uri, method, headers, body)
+    return jsonapi.base.Request(uri, method, headers, body)
 
 
 def to_response(jresponse):
@@ -67,7 +67,7 @@ def to_response(jresponse):
     return fresponse
 
 
-class FlaskAPI(base.api.API):
+class FlaskAPI(jsonapi.base.api.API):
     """
     Implements the API for flask. You can provide the flask application
     later via :meth:`init_app`.

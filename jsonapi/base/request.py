@@ -41,19 +41,20 @@ __all__ = [
 ]
 
 
-
 class Request(object):
     """
     Wraps a request object, which can be used to call the View class.
 
-    :arg jsonapi.base.api.API api:
     :arg str uri:
     :arg str method:
     :arg dict headers:
     :arg bytes body:
+    :arg jsonapi.base.api.API api:
+        The api, which handles this request. If None, the api will set the
+        attribute in :meth:`jsonapi.base.api.API.handle_request`.
     """
 
-    def __init__(self, api, uri, method, headers, body):
+    def __init__(self, uri, method, headers, body, api=None):
         self.api = api
         self.uri = uri
         self.method = method.lower()
@@ -95,34 +96,28 @@ class Request(object):
         return value[0] if value else fallback
 
     @cached_property
-    def media_type(self):
+    def content_type(self):
         """
-        Returns the media type (content type).
-        """
-        media_type = self.headers.get("content-type", "")
-        media_type = media_type.split(";", 1)[0]
-        media_type = media_type.strip()
-        return media_type
+        Returns a tuple, with the media type and the parameters.
 
-    @cached_property
-    def media_parameters(self):
+        .. code-block:: python3
+
+            media_type, media_parameters = request.content_type
+
+        :seealso: :attr:`media_parameters`
+        :seealso: https://www.w3.org/Protocols/rfc1341/4_Content-Type.html
         """
-        Returns a dictionary of the media parameters (content type).
-        """
-        media_parameters = self.headers.get("content-type", "")
-        media_parameters = media_parameters[media_parameters.find(";")+1:]
-        media_parameters = media_parameters.split(";")
-        for i, media_parameter in enumerate(media_parameters):
-            media_parameter = media_parameter.split("=")
-            if len(media_parameter) == 2:
-                key, value = media_parameter
-                key = key.strip()
-                value = value.strip()
-            else:
-                key = media_parameter[0]
-                value = ""
-            media_parameters[i] = (key, value)
-        return dict(media_parameters)
+        content_type = self.headers.get("content-type", "")
+        type_, *parameters = values.split(";")
+
+        for i, parameter in enumerate(parameters):
+            parameter = parameter.split("=", 1)
+            if len(parameter) != 2:
+                detail="Invalid 'Content-Type' parameter '{}'."\
+                    .format(parameter)
+                raise errors.BadRequest(detail=detail)
+            parameters[i] = parameter
+        return (type_, dict(paramters))
 
     @cached_property
     def japi_page_number(self):
@@ -136,9 +131,7 @@ class Request(object):
         :raises jsonapi.base.errors.BadRequest:
             If ``page[number]`` is less than 1
 
-        .. seealso::
-
-            http://jsonapi.org/format/#fetching-pagination
+        :seealso: http://jsonapi.org/format/#fetching-pagination
         """
         tmp = self.get_query_argument("page[number]")
 
@@ -171,9 +164,7 @@ class Request(object):
         :raises jsonapi.base.errors.BadRequest:
             If ``page[size]`` is less than 1
 
-        .. seealso::
-
-            http://jsonapi.org/format/#fetching-pagination
+        :seealso: http://jsonapi.org/format/#fetching-pagination
         """
         tmp = self.get_query_argument("page[size]")
 
@@ -407,9 +398,7 @@ class Request(object):
             >>> request.japi_fields
             ... {"User": ["email", "name"], "Post": ["comments"]}
 
-        .. seealso::
-
-            http://jsonapi.org/format/#fetching-sparse-fieldsets
+        :seealso: http://jsonapi.org/format/#fetching-sparse-fieldsets
         """
         fields = dict()
 
@@ -439,9 +428,7 @@ class Request(object):
             >>> req.japi_include
             ... [["author"], ["comments", "author"]
 
-        .. seealso::
-
-            http://jsonapi.org/format/#fetching-includes
+        :seealso: http://jsonapi.org/format/#fetching-includes
         """
         include = self.get_query_argument("include", "")
         include = [path.split(".") for path in include.split(",") if path]
@@ -458,9 +445,7 @@ class Request(object):
             >>> # /api/Post?sort=name,-age
             ... [("+", "name"), ("-", "age")]
 
-        .. seealso::
-
-            http://jsonapi.org/format/#fetching-sorting
+        :seealso: http://jsonapi.org/format/#fetching-sorting
         """
         tmp = self.get_query_argument("sort")
         tmp = tmp.split(",") if tmp else list()

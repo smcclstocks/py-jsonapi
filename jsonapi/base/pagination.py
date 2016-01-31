@@ -37,6 +37,8 @@ class Pagination(object):
     """
     A helper class for the pagination.
 
+    The fist page has the number *1*.
+
     :arg jsonapi.base.request.Request request:
         The current jsonapi request
     :arg int total_resources:
@@ -49,7 +51,6 @@ class Pagination(object):
         *   :attr:`jsonapi.base.request.Request.japi_page_number`
         *   :attr:`jsonapi.base.request.Request.japi_paginate`
         *   http://jsonapi.org/format/#fetching-pagination
-
     """
 
     def __init__(self, request, total_resources):

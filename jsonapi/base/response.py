@@ -21,7 +21,6 @@ jsonapi.base.response
 =====================
 """
 
-
 __all__ = [
     "Response"
 ]
