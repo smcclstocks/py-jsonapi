@@ -24,7 +24,7 @@ import flask
 import werkzeug
 
 # local
-import jsonapio
+import jsonapi
 
 
 __all__ = [

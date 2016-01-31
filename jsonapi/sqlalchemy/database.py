@@ -38,16 +38,18 @@ class Database(base.database.Database):
     """
     This adapter must be chosen for sqlalchemy models.
 
-    Since we require a proper sqlalchemy session for each request, we need to
-    know how we can get one. The default behaviour is to use the api settings:
-
-    .. code-block:: python3
-
-        # Example
-        Session = sqlalchemy.orm.sessionmaker()
-        Session.configure(bind=engine)
-        api.settings["sqlalchemy_sessionmaker"] = Session
+    :arg sessionmaker:
+        The function used to get a sqlalchemy session. If not given, the api
+        settings must contain a `sqlalchemy_sessionmaker` key.
     """
+
+    def __init__(self, sessionmaker=None, api=None):
+        super().__init__(api=api)
+
+        if sessionmaker is None:
+            sessionmaker = self.api.settings["sqlalchemy_sessionmaker"]
+        self.sessionmaker = sessionmaker
+        return None
 
     def session(self):
         """
