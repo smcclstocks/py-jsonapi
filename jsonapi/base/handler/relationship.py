@@ -152,22 +152,31 @@ class RelationshipHandler(BaseHandler):
         relationship = self.request.json
         validators.assert_relationship_document(relationship)
 
-        # Get the related resources.
-        relative_ids = relationship["data"]
-        relative_ids = [
-            ensure_identifier(self.api, item) for item in relative_ids
-        ]
-
-        relatives = self.db.get_many(relative_ids)
-        relatives = [relatives[(item[0], item[1])] for item in relative_ids]
-
         # Get the meta object.
         meta = relationship.get("meta", dict())
 
-        # Update the relationship.
-        self.serializer.jupdate_relationship(
-            self.resource, self.relname, relatives, meta
-        )
+        # Get the related resources.
+        if self.serializer.is_to_one_relationship(self.relname):
+            relative_id = relationship["data"]
+            relative_id = ensure_identifier(self.api, relative_id)
+
+            relative = self.db.get(relative_id)
+
+            self.serializer.jupdate_relationship(
+                self.resource, self.relname, relative, meta
+            )
+        else:
+            relative_ids = relationship["data"]
+            relative_ids = [
+                ensure_identifier(self.api, item) for item in relative_ids
+            ]
+
+            relatives = self.db.get_many(relative_ids)
+            relatives = [relatives[(item[0], item[1])] for item in relative_ids]
+
+            self.serializer.jupdate_relationship(
+                self.resource, self.relname, relatives, meta
+            )
 
         # Save thte changes.
         self.db.save([self.resource])

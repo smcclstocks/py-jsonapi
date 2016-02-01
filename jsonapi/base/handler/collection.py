@@ -61,11 +61,18 @@ class CollectionHandler(BaseHandler):
         http://jsonapi.org/format/#fetching-resources
         """
         # All requested resources.
+        if self.request.japi_paginate:
+            offset = self.request.japi_page_offset
+            limit = self.request.japi_page_limit
+        else:
+            offset = self.request.japi_offset
+            limit = self.request.japi_limit
+
         resources = self.db.query(
             self.typename,
             order=self.request.japi_sort,
-            limit=self.request.japi_limit,
-            offset=self.request.japi_offset,
+            limit=limit,
+            offset=offset,
             filters=self.request.japi_filters
         )
 

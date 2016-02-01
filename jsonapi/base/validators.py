@@ -63,7 +63,7 @@ def assert_resource_document(d, source_pointer="/"):
     """
     if not isinstance(d, dict):
         raise errors.InvalidDocument(
-            details="A resource document must be an object (dict).",
+            detail="A resource document must be an object (dict).",
             source_pointer=source_pointer
         )
     if "attributes" in d:
@@ -96,7 +96,7 @@ def assert_attributes_document(d, source_pointer="/"):
     """
     if not isinstance(d, dict):
         raise errors.InvalidDocument(
-            details="An attributes document must be an object.",
+            detail="An attributes document must be an object.",
             source_pointer=source_pointer
         )
     return None
@@ -115,7 +115,7 @@ def assert_relationships_document(d, source_pointer="/"):
     """
     if not isinstance(d, dict):
         raise errors.InvalidDocument(
-            details="A relationships document must be an object.",
+            detail="A relationships document must be an object.",
             source_pointer=source_pointer
         )
     for relname, relvalue in d.items():
@@ -136,7 +136,7 @@ def assert_relationship_document(d, source_pointer="/"):
     """
     if not isinstance(d, dict):
         raise errors.InvalidDocument(
-            details="A relationship document must be an object",
+            detail="A relationship document must be an object",
             source_pointer=source_pointer
         )
     if "links" in d:
@@ -179,23 +179,23 @@ def assert_identifier_document(d, source_pointer="/"):
 
     if not "type" in d:
         raise errors.InvalidDocument(
-            details="The 'type' field is not present.",
+            detail="The 'type' field is not present.",
             source_pointer=source_pointer
         )
     if not isinstance(d["type"], str):
         raise errors.InvalidDocument(
-            details="The 'type' value must be a string.",
+            detail="The 'type' value must be a string.",
             source_pointer=source_pointer
         )
 
     if not "id" in d:
         raise errors.InvalidDocument(
-            details="The 'id' field is not present.",
+            detail="The 'id' field is not present.",
             source_pointer=source_pointer
         )
     if not isinstance(d["id"], str):
         raise errors.InvalidDocument(
-            details="The 'id' value must be a string.",
+            detail="The 'id' value must be a string.",
             source_pointer=source_pointer
         )
     return None
@@ -215,7 +215,7 @@ def assert_links_document(d, source_pointer="/"):
     """
     if not isinstance(d, dict):
         raise errors.InvalidDocument(
-            details="A links document must be an object.",
+            detail="A links document must be an object.",
             source_pointer=source_pointer
         )
 
@@ -238,14 +238,14 @@ def assert_link_document(d, source_pointer="/"):
     """
     if not isinstance(d, (str, dict)):
         raise errors.InvalidDocument(
-            details="A link document must be a string or an object.",
+            detail="A link document must be a string or an object.",
             source_pointer=source_pointer
         )
 
     if isinstance(d, dict):
         if not ("href" in d and isinstance(d["href"], str)):
             raise errors.InvalidDocument(
-                details="The 'href' value must be a string.",
+                detail="The 'href' value must be a string.",
                 source_pointer=source_pointer + "href/"
             )
         if "meta" in d:
@@ -267,7 +267,7 @@ def assert_meta_document(d, source_pointer="/"):
     """
     if not isinstance(d, dict):
         raise errors.InvalidDocument(
-            details="A meta document must be an object.",
+            detail="A meta document must be an object.",
             source_pointer=source_pointer
         )
     return None

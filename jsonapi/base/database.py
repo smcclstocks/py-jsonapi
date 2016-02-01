@@ -426,7 +426,7 @@ class BulkSession(object):
                 curr_resources = list(relatives.values())
         return result
 
-    def load_japi_relationships(self, rel_doc):
+    def load_japi_relationships(self, reldoc):
         """
         Loads the relationships based upon a JSONapi relationships object:
 
@@ -456,12 +456,12 @@ class BulkSession(object):
                 "publisher": None
             }
 
-        :arg dict rel_doc:
+        :arg dict reldoc:
         """
         # Collect all ids.
         ids = set()
-        for relname in relobj.keys():
-            reldata = relobj[relname].get("data")
+        for relname in reldoc.keys():
+            reldata = reldoc[relname].get("data")
             if isinstance(reldata, dict):
                 ids.add((reldata["type"], reldata["id"]))
             elif isinstance(reldata, list):
@@ -474,12 +474,12 @@ class BulkSession(object):
 
         # Map the relationships to the related resources.
         result = dict()
-        for relname in relobj.keys():
+        for relname in reldoc.keys():
             # Skip the relationship, if the *data* dictionary is not present.
-            if not "data" in relobj[relname]:
+            if not "data" in reldoc[relname]:
                 continue
 
-            reldata = relobj[relname]["data"]
+            reldata = reldoc[relname]["data"]
             if reldata is None:
                 result[relname] = None
             elif isinstance(reldata, dict):

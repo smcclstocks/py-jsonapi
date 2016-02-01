@@ -56,9 +56,7 @@ class Database(base.database.Database):
         Returns a :class:`DatabaseSession`, which can be used to query
         sqlalchemy models.
         """
-        sqla_session_maker = self.api.settings["sqlalchemy_sessionmaker"]
-        sqla_session = sqla_session_maker()
-        return DatabaseSession(self.api, sqla_session)
+        return DatabaseSession(self.api, self.sessionmaker())
 
 
 class DatabaseSession(base.database.DatabaseSession):

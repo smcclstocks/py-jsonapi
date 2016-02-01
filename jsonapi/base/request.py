@@ -186,6 +186,24 @@ class Request(object):
         return tmp
 
     @cached_property
+    def japi_page_limit(self):
+        """
+        Returns the limit based on the :attr:`japi_page_size`
+        """
+        return self.japi_page_size if self.japi_paginate else None
+
+    @cached_property
+    def japi_page_offset(self):
+        """
+        Returns the offset based on the :attr:`japi_page_size` and
+        :attr:`japi_page_number`.
+        """
+        if self.japi_paginate:
+            return self.japi_page_size*(self.japi_page_number - 1)
+        else:
+            return None
+
+    @cached_property
     def japi_paginate(self):
         """
         Returns True, if the result should be paginated.
@@ -204,8 +222,7 @@ class Request(object):
     @cached_property
     def japi_offset(self):
         """
-        Return the offset when querying a collection. This is the offset, which
-        is sent to the database.
+        Return the offset when querying a collection.
 
         Query parameter: ``offset``
 
@@ -238,11 +255,6 @@ class Request(object):
                     detail="The 'offset' must be less than the 'page[size]'.",
                     source_parameter="offset"
                 )
-
-            # If a page size is given, we must adjust the offset.
-            # Please note, that the page numbers start by 1.
-            if self.japi_paginate:
-                offset += self.japi_page_size*(self.japi_page_number - 1)
         return offset
 
     @cached_property
@@ -275,19 +287,6 @@ class Request(object):
                     detail="The 'limit' must be >= 1.",
                     source_parameter="limit"
                 )
-
-            # Adjust the limit, so that no documents from the next page are
-            # returned.
-            if self.japi_paginate:
-                # If the limit is bigger than the current page size, use
-                # the current page size.
-                limit = min(limit, self.japi_page_size)
-
-                # Make sure, we do not return more documents than allowed,
-                # when offset is used.
-                offset = self.offset \
-                        - self.japi_page_size*(self.japi_page_number - 1)
-                limit = max(limit, offset)
         return limit
 
     @cached_property

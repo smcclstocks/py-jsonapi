@@ -80,11 +80,11 @@ class ResourceHandler(BaseHandler):
 
         included = list()
         for resource in included_resources.values():
-            typename = self.api.get_typename(self.resource)
+            typename = self.api.get_typename(resource)
             serializer = self.api.get_serializer(typename)
-            data = serializer.serialize_resource(
-                self.resource, fields=self.request.japi_fields.get(typename)
-            )
+            included.append(serializer.serialize_resource(
+                resource, fields=self.request.japi_fields.get(typename)
+            ))
 
         meta = OrderedDict()
         links = OrderedDict()

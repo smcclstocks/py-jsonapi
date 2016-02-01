@@ -3,8 +3,7 @@ py-jsonapi
 
 .. note::
 
-    This library is currently in the beta phase and I will add missing features
-    soon.
+    This library is currently in the beta phase.
     If you have any suggestions or found bugs, please create a new issue.
 
 
@@ -19,7 +18,7 @@ has built in support for many web frameworks and database drivers:
 Furthermore, it can be extended to work with **all web frameworks and database
 engines**.
 
-But that's not all: We support **asynchronous and blocking** code.
+But that's not all: We support **blocking and (soon) asynchronous** code.
 
 
 Docs
