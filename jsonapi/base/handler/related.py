@@ -70,7 +70,7 @@ class RelatedHandler(BaseHandler):
         # Use the database *fetch_includes()* function, to fetch all resources
         # from the relationship.
         related_resources = self.db.fetch_includes(
-            [self.resource], [(self.relname,)]
+            [self.resource], [[self.relname]]
         )
 
         # Build the document.
