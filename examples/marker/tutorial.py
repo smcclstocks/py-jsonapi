@@ -18,7 +18,7 @@ class Post(object):
         return None
 
 
-    @jsonapi.marker.property.IDAttribute()
+    @jsonapi.marker.property.id_attribute()
     def id(self):
         """
         The id attribute must be marked with the *IDAttribute* decorator.
@@ -26,7 +26,7 @@ class Post(object):
         return self._id
 
 
-    @jsonapi.marker.property.Attribute(name="headline")
+    @jsonapi.marker.property.attribute(name="headline")
     def title(self):
         """
         Normal attributes can be marked with the *Attribute* decorator.
@@ -41,7 +41,7 @@ class Post(object):
         return title
 
 
-    @jsonapi.marker.property.Attribute()
+    @jsonapi.marker.property.attribute()
     def text(self):
         """
         In contrary to the *title* attribute, the *text* can be changed.
@@ -56,7 +56,7 @@ class Post(object):
         return None
 
 
-    @jsonapi.marker.property.ToOneRelationship()
+    @jsonapi.marker.property.to_one_relationship()
     def author(self):
         """
         This property describes a *to-one* relationship. The *author* is turned
@@ -75,7 +75,7 @@ class Post(object):
         return None
 
 
-    @jsonapi.marker.property.ToManyRelationship()
+    @jsonapi.marker.property.to_many_relationship()
     def comments(self):
         """
         Defining a *to-many* relationship requires a bit more effort. If it
@@ -115,9 +115,8 @@ class Post(object):
         return None
 
 
-post_markup = jsonapi.marker.Markup(Post)
-post_serializer = jsonapi.marker.Serializer(post_markup)
+post_schema = jsonapi.base.schema.Schema(Post)
 
 if __name__ == "__main__":
-    print(post_serializer.attributes())
-    print(post_serializer.relationships())
+    print(post_schema.attributes)
+    print(post_schema.relationships)

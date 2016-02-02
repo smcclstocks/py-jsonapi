@@ -1,20 +1,12 @@
 #!/usr/bin/env python3
 
-# py-jsonapi - A toolkit for building a JSONapi
-# Copyright (C) 2016 Benedikt Schmitt <benedikt@benediktschmitt.de>
-#
-# This program is free software: you can redistribute it and/or modify
-# it under the terms of the GNU Affero General Public License as published
-# by the Free Software Foundation, either version 3 of the License, or
-# (at your option) any later version.
-#
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU Affero General Public License for more details.
-#
-# You should have received a copy of the GNU Affero General Public License
-# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+"""
+jsonapi.base.handler.collection
+===============================
+
+:license: GNU Affero General Public License v3
+:copyright: 2016 by Benedikt Schmitt <benedikt@benediktschmitt.de>
+"""
 
 # std
 from collections import OrderedDict
@@ -35,7 +27,6 @@ class CollectionHandler(BaseHandler):
         """
         """
         super().__init__(api, request)
-
         self.typename = request.japi_uri_arguments.get("type")
         self.serializer = api.get_serializer(self.typename, None)
         return None
@@ -43,12 +34,8 @@ class CollectionHandler(BaseHandler):
     def prepare(self):
         """
         """
-        # The typename is not mapped to a serializer. So the the type does not
-        # exist.
-        if self.serializer is None:
+        if not self.api.has_type(self.typename):
             raise errors.NotFound()
-
-        # Make sure, the content type is valid.
         if self.request.content_type[0] != "application/vnd.api+json":
             raise errors.UnsupportedMediaType()
         return None
@@ -60,7 +47,7 @@ class CollectionHandler(BaseHandler):
 
         http://jsonapi.org/format/#fetching-resources
         """
-        # All requested resources.
+        # Fetch the requested resources.
         if self.request.japi_paginate:
             offset = self.request.japi_page_offset
             limit = self.request.japi_page_limit
@@ -69,11 +56,8 @@ class CollectionHandler(BaseHandler):
             limit = self.request.japi_limit
 
         resources = self.db.query(
-            self.typename,
-            order=self.request.japi_sort,
-            limit=limit,
-            offset=offset,
-            filters=self.request.japi_filters
+            self.typename, order=self.request.japi_sort, limit=limit,
+            offset=offset, filters=self.request.japi_filters
         )
 
         # Fetch all related resources, which should be included.

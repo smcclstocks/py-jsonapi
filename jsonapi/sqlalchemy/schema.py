@@ -1,20 +1,14 @@
 #!/usr/bin/env python3
 
-# py-jsonapi - A toolkit for building a JSONapi
-# Copyright (C) 2016 Benedikt Schmitt <benedikt@benediktschmitt.de>
-#
-# This program is free software: you can redistribute it and/or modify
-# it under the terms of the GNU Affero General Public License as published
-# by the Free Software Foundation, either version 3 of the License, or
-# (at your option) any later version.
-#
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU Affero General Public License for more details.
-#
-# You should have received a copy of the GNU Affero General Public License
-# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+"""
+jsonapi.sqlalchemy.schema
+=========================
+
+:license: GNU Affero General Public License v3
+:copyright: 2016 by Benedikt Schmitt <benedikt@benediktschmitt.de>
+
+The *py-jsonapi* schema for *sqlalchemy* models.
+"""
 
 # std
 import logging
@@ -23,35 +17,38 @@ import logging
 import sqlalchemy
 
 # local
-from jsonapi import marker
+import jsonapi
 
 
 __all__ = [
-    "SQLAlchemyMarkup"
+    "Attribute",
+    "IDAttribute",
+    "ToOneRelationship",
+    "ToManyRelationship",
+    "Schema"
 ]
 
 
-log = logging.getLogger(__file__)
+LOG = logging.getLogger(__file__)
 
 
-class SQLAlchemyAttribute(marker.markup.Attribute):
+class Attribute(jsonapi.base.schema.Attribute):
     """
-    Wraps an sqlalchemy attribute.
+    Wraps an sqlalchemy database column.
 
-    :arg model:
-        The sqlchemy model class
+    :arg resource_class:
+        The sqlchemy model
     :arg sqlattr:
         An sqlalchemy ColumnProperty
     """
 
-    def __init__(self, model, sqlattr):
+    def __init__(self, resource_class, sqlattr):
         """
         """
         super().__init__(name=sqlattr.key)
-
         self.sqlattr = sqlattr
         self.class_attr = sqlattr.class_attribute
-        self.model = model
+        self.resource_class = resource_class
         return None
 
     def get(self, resource):
@@ -64,7 +61,7 @@ class SQLAlchemyAttribute(marker.markup.Attribute):
         return self.class_attr.__delete__(resource)
 
 
-class SQLAlchemyIDAttribute(marker.markup.IDAttribute):
+class IDAttribute(jsonapi.base.schema.IDAttribute):
     """
     Wraps an sqlalchemy primary key. We only allow reading the id, but not
     changing it.
@@ -78,34 +75,40 @@ class SQLAlchemyIDAttribute(marker.markup.IDAttribute):
 
         We currently use the inspection module of sqlalchemy to get the
         primary key. Can we optimize this?
+
+    :arg resource_class:
+        The sqlalchemy model
     """
 
-    def __init__(self, model):
+    def __init__(self, resource_class):
         super().__init__()
-
-        self.model = model
+        self.resource_class = resource_class
         return None
 
     def get(self, resource):
         """
-        We use the Inspector for :attr:`model` to get the primary key
+        We use the Inspector for :attr:`resource_class` to get the primary key
         for the resource.
         """
         keys = sqlalchemy.inspect(resource).identity
         return str(keys[0]) if keys is not None else None
 
 
-class SQLAlchemyToOneRelationship(marker.markup.ToOneRelationship):
+class ToOneRelationship(jsonapi.base.schema.ToOneRelationship):
     """
     Wraps an sqlalchemy to-one relationship.
+
+    :arg resource_class:
+        The sqlalchemy model
+    :arg sqlrel:
+        The relationship defined on the model
     """
 
-    def __init__(self, model, sqlrel):
+    def __init__(self, resource_class, sqlrel):
         super().__init__(name=sqlrel.key)
-
         self.sqlrel = sqlrel
         self.class_attr = sqlrel.class_attribute
-        self.model = model
+        self.resource_class = resource_class
         return None
 
     def get(self, resource):
@@ -118,17 +121,21 @@ class SQLAlchemyToOneRelationship(marker.markup.ToOneRelationship):
         return self.class_attr.__delete__(resource)
 
 
-class SQLAlchemyToManyRelationship(marker.markup.ToManyRelationship):
+class ToManyRelationship(jsonapi.base.schema.ToManyRelationship):
     """
     Wraps an sqlalchemy to-many relationship.
+
+    :arg resource_class:
+        The sqlalchemy model
+    :arg sqlrel:
+        The relationship defined on the model
     """
 
-    def __init__(self, model, sqlrel):
+    def __init__(self, resource_class, sqlrel):
         super().__init__(name=sqlrel.key)
-
         self.sqlrel = sqlrel
         self.class_attr = sqlrel.class_attribute
-        self.model = model
+        self.resource_class = resource_class
         return None
 
     def get(self, resource):
@@ -139,7 +146,7 @@ class SQLAlchemyToManyRelationship(marker.markup.ToManyRelationship):
         return None
 
     def delete(self, resource):
-        self.class_attr.__delete__(resource)
+        self.class_attr.__get__(resource, None).clear()
         return None
 
     def add(self, resource, relative):
@@ -161,25 +168,31 @@ class SQLAlchemyToManyRelationship(marker.markup.ToManyRelationship):
         return None
 
 
-class SQLAlchemyMarkup(marker.markup.Markup):
+class Schema(jsonapi.base.schema.Schema):
     """
-    Finds also sqlalchemy attributes and relationships on the model.
+    This schema subclass finds also sqlalchemy attributes and relationships
+    defined on the resource class.
+
+    :arg resource_class:
+        The sqlalchemy model
+    :arg str typename:
+        The typename of the resources in the JSONapi. If not given, it is
+        derived from the resource class.
     """
 
-    def __init__(self, model):
+    def __init__(self, resource_class):
         """
         """
-        super().__init__(model)
+        super().__init__(resource_class)
         self.find_sqlalchemy_markers()
         return None
 
     def find_sqlalchemy_markers(self):
         """
-        .. todo:: Find hybrid methods and properties.
         .. todo:: Ignore the id (primary key) attributes.
         .. todo:: Ignore the foreign key attributes.
         """
-        inspection = sqlalchemy.inspect(self.model)
+        inspection = sqlalchemy.inspect(self.resource_class)
 
         # Find the relationships
         for sql_rel in inspection.relationships.values():
@@ -190,9 +203,7 @@ class SQLAlchemyMarkup(marker.markup.Markup):
 
             # *to-one*: MANYTOONE
             if sql_rel.direction == sqlalchemy.orm.interfaces.MANYTOONE:
-                rel = SQLAlchemyToOneRelationship(
-                    self.model, sql_rel
-                )
+                rel = ToOneRelationship(self.resource_class, sql_rel)
                 self.relationships[rel.name] = rel
                 self.fields.add(rel.name)
 
@@ -201,9 +212,7 @@ class SQLAlchemyMarkup(marker.markup.Markup):
                 sqlalchemy.orm.interfaces.MANYTOMANY,
                 sqlalchemy.orm.interfaces.ONETOMANY
                 ):
-                rel = SQLAlchemyToManyRelationship(
-                    self.model, sql_rel
-                )
+                rel = ToManyRelationship(self.resource_class, sql_rel)
                 self.relationships[rel.name] = rel
                 self.fields.add(rel.name)
 
@@ -214,11 +223,11 @@ class SQLAlchemyMarkup(marker.markup.Markup):
             if sql_attr.key in self.fields:
                 continue
 
-            attr = SQLAlchemyAttribute(self.model, sql_attr)
+            attr = Attribute(self.resource_class, sql_attr)
             self.attributes[attr.name] = attr
             self.fields.add(attr.name)
 
-        # Use the primary id of the model, if not id marker is set.
+        # Use the primary id of the resource_class, if not id marker is set.
         if self.id_attribute is None:
-            self.id_attribute = SQLAlchemyIDAttribute(self.model)
+            self.id_attribute = IDAttribute(self.resource_class)
         return None

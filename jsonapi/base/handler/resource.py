@@ -1,20 +1,12 @@
 #!/usr/bin/env python3
 
-# py-jsonapi - A toolkit for building a JSONapi
-# Copyright (C) 2016 Benedikt Schmitt <benedikt@benediktschmitt.de>
-#
-# This program is free software: you can redistribute it and/or modify
-# it under the terms of the GNU Affero General Public License as published
-# by the Free Software Foundation, either version 3 of the License, or
-# (at your option) any later version.
-#
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU Affero General Public License for more details.
-#
-# You should have received a copy of the GNU Affero General Public License
-# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+"""
+jsonapi.base.handler.resource
+=============================
+
+:license: GNU Affero General Public License v3
+:copyright: 2016 by Benedikt Schmitt <benedikt@benediktschmitt.de>
+"""
 
 # std
 from collections import OrderedDict
@@ -35,7 +27,13 @@ class ResourceHandler(BaseHandler):
         """
         super().__init__(api, request)
         self.typename = request.japi_uri_arguments.get("type")
-        self.serializer = api.get_serializer(self.typename, None)
+
+        # The *typename* is not sufficent for getting the correct schema and
+        # serializer for the resource if the resource is a subtype of
+        # *self.typename*. So we initialize this attributes in *prepare()*.
+        self.real_typename = None
+        self.schema = None
+        self.serializer = None
 
         # We will load the resource in *prepare()*.
         self.resource_id = self.request.japi_uri_arguments.get("id")
@@ -45,9 +43,7 @@ class ResourceHandler(BaseHandler):
     def prepare(self):
         """
         """
-        # The typename is not mapped to a serializer. So the the type does not
-        # exist.
-        if self.serializer is None:
+        if not self.api.has_type(self.typename):
             raise errors.NotFound()
 
         # Make sure, the content type is valid.
@@ -58,6 +54,10 @@ class ResourceHandler(BaseHandler):
         self.resource = self.db.get((self.typename, self.resource_id))
         if self.resource is None:
             raise errors.NotFound()
+
+        self.real_typename = self.api.get_typename(self.resource)
+        self.schema = self.api.get_schema(self.real_typename)
+        self.serializer = self.api.get_serializer(self.real_typename)
         return None
 
     def get(self):
@@ -72,10 +72,8 @@ class ResourceHandler(BaseHandler):
         )
 
         # Build the response document.
-        typename = self.api.get_typename(self.resource)
-        serializer = self.api.get_serializer(typename)
-        data = serializer.serialize_resource(
-            self.resource, fields=self.request.japi_fields.get(typename)
+        data = self.serializer.serialize_resource(
+            self.resource, fields=self.request.japi_fields.get(self.typename)
         )
 
         included = list()
@@ -112,23 +110,21 @@ class ResourceHandler(BaseHandler):
 
         # Update the attributes
         attributes = data.get("attributes", dict())
-        self.serializer.jupdate_attributes(self.resource, attributes)
+        self.serializer.update_attributes(self.resource, attributes)
 
         # Update the relationships
         relationships = data.get("relationships", dict())
         relationships = self.db.load_japi_relationships(relationships)
         for relname, relatives in relationships.items():
-            self.serializer.jupdate_relationships(self.resource, relname, relatives)
+            self.serializer.update_relationships(self.resource, relname, relatives)
 
         # Save the resource
         self.db.save([self.resource])
         self.db.commit()
 
         # Create the response
-        typename = self.api.get_typename(self.resource)
-        serializer = self.api.get_serializer(typename)
-        data = serializer.serialize_resource(
-            self.resource, fields=self.request.japi_fields.get(typename)
+        data = self.serializer.serialize_resource(
+            self.resource, fields=self.request.japi_fields.get(self.typename)
         )
 
         included = list()

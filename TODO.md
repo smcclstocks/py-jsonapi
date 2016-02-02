@@ -44,17 +44,3 @@
 
 *   Throw an exception if an attribute or relationship should be changed, but
     is read only.
-
-    This needs to be done by the serializer.
-
-*   Add marker for *links* documents
-    These marker must support resource link documents and relationship
-    documents.
-
-    http://jsonapi.org/format/#document-links
-
-*   Add marker for *meta* document
-    These markers must support resource meta, relationship meta and link meta
-    documents.
-
-    http://jsonapi.org/format/#document-meta

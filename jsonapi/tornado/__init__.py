@@ -1,20 +1,40 @@
 #!/usr/bin/env python3
 
-# py-jsonapi - A toolkit for building a JSONapi
-# Copyright (C) 2016 Benedikt Schmitt <benedikt@benediktschmitt.de>
-#
-# This program is free software: you can redistribute it and/or modify
-# it under the terms of the GNU Affero General Public License as published
-# by the Free Software Foundation, either version 3 of the License, or
-# (at your option) any later version.
-#
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU Affero General Public License for more details.
-#
-# You should have received a copy of the GNU Affero General Public License
-# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+"""
+jsonapi.tornado
+===============
+
+:license: GNU Affero General Public License v3
+:copyright: 2016 by Benedikt Schmitt <benedikt@benediktschmitt.de>
+
+The *py-jsonapi* extension for tornado. Binding the APi to a tornado application
+is
+
+.. code-block:: python3
+
+    import tornado
+    import tornado.web
+    import jsonapi
+    import jsonapi.tornado
+
+    app = tornado.web.Application()
+    api = jsonapi.tornado.TornadoAPI("/api", tornado_app=app)
+
+    # If the tornado application is not available, when you create the API,
+    # you can bind it later:
+    api.init_app(app)
+
+The API instance is added to the tornado application's settings dictionary:
+
+.. code-block:: python3
+
+    app.settings["jsonapi"] is api
+
+API
+---
+
+.. autoclass:: TornadoAPI
+"""
 
 # third party
 import tornado

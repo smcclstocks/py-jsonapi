@@ -13,8 +13,8 @@ class User(mongoengine.Document):
     birthday = mongoengine.DateTimeField()
 
 mongoengine_adapter = jsonapi.mongoengine.Database()
-user_serializer = jsonapi.mongoengine.Serializer(User)
-api.add_model(user_serializer, mongoengine_adapter)
+user_schema = jsonapi.mongoengine.Schema(User)
+api.add_type(user_schema, mongoengine_adapter)
 
 if __name__ == "__main__":
     mongoengine.connect("py_jsonapi")

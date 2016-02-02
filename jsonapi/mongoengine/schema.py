@@ -1,20 +1,14 @@
 #!/usr/bin/env python3
 
-# py-jsonapi - A toolkit for building a JSONapi
-# Copyright (C) 2016 Benedikt Schmitt <benedikt@benediktschmitt.de>
-#
-# This program is free software: you can redistribute it and/or modify
-# it under the terms of the GNU Affero General Public License as published
-# by the Free Software Foundation, either version 3 of the License, or
-# (at your option) any later version.
-#
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU Affero General Public License for more details.
-#
-# You should have received a copy of the GNU Affero General Public License
-# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+"""
+jsonapi.mongoengine.schema
+==========================
+
+:license: GNU Affero General Public License v3
+:copyright: 2016 by Benedikt Schmitt <benedikt@benediktschmitt.de>
+
+The JSONapi schema for mongoengine documents.
+"""
 
 # std
 import logging
@@ -23,14 +17,20 @@ import logging
 import mongoengine
 
 # local
-from jsonapi import marker
+import jsonapi
 
 
-log = logging.getLogger(__file__)
+LOG = logging.getLogger(__file__)
 
 
 __all__ = [
-    "MongoEngineMarkup"
+    "is_to_one_relationship",
+    "is_to_many_relationship",
+    "Attribute",
+    "IDAttribute",
+    "ToOneRelationship",
+    "ToManyRelationship",
+    "Schema"
 ]
 
 
@@ -70,19 +70,24 @@ def is_to_many_relationship(field):
     return False
 
 
-class MongoEngineAttribute(marker.markup.Attribute):
+class Attribute(jsonapi.base.schema.Attribute):
     """
-    Wraps any mongoengine.BaseField instance, which does not represent a
-    relationship.
+    Wraps any *mongoengine.BaseField* instance, which does not represent a
+    relationship or the id.
+
+    :arg str name:
+        The name of the mongoengine attribute
+    :arg resource_class:
+        The mongoengine document
+    :arg me_field:
+        The mongoengine BaseField wrapped by this Attribute.
     """
 
-    def __init__(self, name, model, me_field):
+    def __init__(self, name, resource_class, me_field):
         """
         """
         super().__init__(name=name)
-        self.model = model
-
-        # The field object (mongoengine.BaseField)
+        self.resource_class = resource_class
         self.me_field = me_field
         return None
 
@@ -98,16 +103,23 @@ class MongoEngineAttribute(marker.markup.Attribute):
         return None
 
 
-class MongoEngineIDAttribute(marker.markup.IDAttribute):
+class IDAttribute(jsonapi.base.schema.IDAttribute):
     """
     Returns the ID string (not the ObjectId instance). We only implement
     the :meth:`get` method, so the the id can not be changed by the user.
+
+    :arg str name:
+        The name of the id field.
+    :arg str resource_class:
+        The mongoengine document
+    :arg me_field:
+        The mongoengine id field of the resource class
     """
 
-    def __init__(self, name, model, me_field):
+    def __init__(self, name, resource_class, me_field):
         super().__init__(name=name)
+        self.resource_class = resource_class
         self.me_field = me_field
-        self.model = model
         return None
 
     def get(self, resource):
@@ -118,25 +130,21 @@ class MongoEngineIDAttribute(marker.markup.IDAttribute):
         return str(self.me_field.__get__(resource, None))
 
 
-class MongoEngineToOneRelationship(marker.markup.ToOneRelationship):
+class ToOneRelationship(jsonapi.base.schema.ToOneRelationship):
     """
-    Wraps a *to-one* relationship. We assume, that a motorengine field
+    Wraps a *to-one* relationship. We assume, that a mongoengine field
     describes a *to-one* relationship, if :func:`is_to_one_relationship`
     returns True.
     """
 
-    def __init__(self, name, model, me_field):
+    def __init__(self, name, resource_class, me_field):
         super().__init__(name=name)
-
-        # The document class
-        self.model = model
-
-        # The motorengine BaseField instance.
+        self.resource_class = resource_class
         self.me_field = me_field
         return None
 
     def get(self, resource):
-        with mongoengine.context_managers.no_dereference(self.model):
+        with mongoengine.context_managers.no_dereference(self.resource_class):
             return self.me_field.__get__(resource, None)
 
     def set(self, resource, relative):
@@ -146,24 +154,27 @@ class MongoEngineToOneRelationship(marker.markup.ToOneRelationship):
         return self.me_field.__set__(resource, None)
 
 
-class MongoEngineToManyRelationship(marker.markup.ToManyRelationship):
+class ToManyRelationship(jsonapi.base.schema.ToManyRelationship):
     """
-    Wraps a *to-many* relationship. A motorengine field is considered as
+    Wraps a *to-many* relationship. A mongoengine field is considered as
     *to-many* relationship, if :func:`is_to_many_relationship` returns True.
+
+    :arg str name:
+        The name of the mongoengine relationship
+    :arg resource_class:
+        The mongoengine document
+    :arg me_field:
+        The mongoengine BaseField, which describes the relationship
     """
 
-    def __init__(self, name, model, me_field):
+    def __init__(self, name, resource_class, me_field):
         super().__init__(name=name)
-
-        # The document class
-        self.model = model
-
-        # The motorengine BaseField instance.
+        self.resource_class = resource_class
         self.me_field = me_field
         return None
 
     def get(self, resource):
-        with mongoengine.context_managers.no_dereference(self.model):
+        with mongoengine.context_managers.no_dereference(self.resource_class):
             return self.me_field.__get__(resource, None)
 
     def set(self, resource, relatives):
@@ -175,19 +186,28 @@ class MongoEngineToManyRelationship(marker.markup.ToManyRelationship):
     def add(self, resource, relative):
         return self.me_field.__get__(resource, None).append(relative)
 
+    def extend(self, resource, relatives):
+        self.me_field.__get__(resource, None).extend(relatives)
+
     def remove(self, resource, relative):
         return self.me_field.__get__(resource, None).remove(relative)
 
 
-class MongoEngineMarkup(marker.markup.Markup):
+class Schema(jsonapi.base.schema.Schema):
     """
-    This subclass of Markup also finds also mongoengine fields.
+    This Schema subclass also finds mongoengine attributes and relationships.
+
+    :arg resource_class:
+        The mongoengine document (class)
+    :arg str typename:
+        The typename of the resources in the JSONapi. If not given, it is
+        derived from the resource class.
     """
 
-    def __init__(self, model):
+    def __init__(self, resource_class, typename=None):
         """
         """
-        super().__init__(model)
+        super().__init__(resource_class, typename)
         self.find_mongoengine_markers()
         return None
 
@@ -195,20 +215,19 @@ class MongoEngineMarkup(marker.markup.Markup):
         """
         Finds all mongoengine attributes and relationships.
         """
-        for name, field in self.model._fields.items():
+        for name, field in self.resource_class._fields.items():
 
             # Check if the field is the id field.
             if self.id_attribute is None \
-                and self.model._db_field_map[name] == "_id":
-                attribute = MongoEngineIDAttribute(
-                    name, self.model, field
-                )
+                and self.resource_class._db_field_map[name] == "_id":
+
+                attribute = IDAttribute(name, self.resource_class, field)
                 self.id_attribute = attribute
 
             # Check if the field is a *to-one* relationship.
             elif is_to_one_relationship(field):
-                relationship = MongoEngineToOneRelationship(
-                    name, self.model, field
+                relationship = ToOneRelationship(
+                    name, self.resource_class, field
                 )
 
                 assert not relationship.name in self.relationships
@@ -217,8 +236,8 @@ class MongoEngineMarkup(marker.markup.Markup):
 
             # Check if the field is a *to-many* relationship.
             elif is_to_many_relationship(field):
-                relationship = MongoEngineToManyRelationship(
-                    name, self.model, field
+                relationship = ToManyRelationship(
+                    name, self.resource_class, field
                 )
 
                 assert not relationship.name in self.relationships
@@ -227,8 +246,8 @@ class MongoEngineMarkup(marker.markup.Markup):
 
             # The field is an attribute.
             else:
-                attribute = MongoEngineAttribute(
-                    name, self.model, field
+                attribute = Attribute(
+                    name, self.resource_class, field
                 )
 
                 assert not attribute in self.attributes

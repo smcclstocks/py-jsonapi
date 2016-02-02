@@ -1,20 +1,12 @@
 #!/usr/bin/env python3
 
-# py-jsonapi - A toolkit for building a JSONapi
-# Copyright (C) 2016 Benedikt Schmitt <benedikt@benediktschmitt.de>
-#
-# This program is free software: you can redistribute it and/or modify
-# it under the terms of the GNU Affero General Public License as published
-# by the Free Software Foundation, either version 3 of the License, or
-# (at your option) any later version.
-#
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU Affero General Public License for more details.
-#
-# You should have received a copy of the GNU Affero General Public License
-# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+"""
+jsonapi.base.handler.related
+============================
+
+:license: GNU Affero General Public License v3
+:copyright: 2016 by Benedikt Schmitt <benedikt@benediktschmitt.de>
+"""
 
 # std
 from collections import OrderedDict
@@ -33,10 +25,13 @@ class RelatedHandler(BaseHandler):
         """
         """
         super().__init__(api, request)
-
         self.typename = request.japi_uri_arguments.get("type")
         self.relname = request.japi_uri_arguments.get("relname")
-        self.serializer = self.api.get_serializer(self.typename, None)
+
+        # Initialized, when we know the exact typename of the resource.
+        self.real_typename = None
+        self.schema = None
+        self.relationship = None
 
         # The resource is loaded in *prepare()*
         self.resource_id = request.japi_uri_arguments.get("id")
@@ -46,21 +41,23 @@ class RelatedHandler(BaseHandler):
     def prepare(self):
         """
         """
-        # If the serializer is None, the typename is not known to the API.
-        if self.serializer is None:
+        if not self.api.has_type(self.typename):
             raise errors.NotFound()
 
-        # Make sure, that the relationship exists.
-        if not self.serializer.has_relationship(self.relname):
-            raise errors.NotFound()
-
-        # Make sure, the content type is valid.
         if self.request.content_type[0] != "application/vnd.api+json":
             raise errors.UnsupportedMediaType()
 
         # Load the resource.
         self.resource = self.db.get((self.typename, self.resource_id))
         if self.resource is None:
+            raise errors.NotFound()
+
+        self.real_typename = self.api.get_typename(self.resource)
+        self.schema = self.api.get_schema(self.real_typename)
+        self.relationship = self.schema.relationships.get(self.relname)
+
+        # Make sure the relationship exists.
+        if self.relationship is None:
             raise errors.NotFound()
         return None
 

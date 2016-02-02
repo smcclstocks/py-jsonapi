@@ -1,24 +1,14 @@
 #!/usr/bin/env python3
 
-# py-jsonapi - A toolkit for building a JSONapi
-# Copyright (C) 2016 Benedikt Schmitt <benedikt@benediktschmitt.de>
-#
-# This program is free software: you can redistribute it and/or modify
-# it under the terms of the GNU Affero General Public License as published
-# by the Free Software Foundation, either version 3 of the License, or
-# (at your option) any later version.
-#
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU Affero General Public License for more details.
-#
-# You should have received a copy of the GNU Affero General Public License
-# along with this program.  If not, see <http://www.gnu.org/licenses/>.
-
 """
 jsonapi.base.api
 ================
+
+:license: GNU Affero General Public License v3
+:copyright: 2016 by Benedikt Schmitt <benedikt@benediktschmitt.de>
+
+The API application. Handles all requests and know all available resource
+types.
 """
 
 # std
@@ -39,6 +29,7 @@ except ImportError:
 from .. import version
 from . import errors
 from . import handler
+from . import serializer
 
 
 __all__ = [
@@ -81,14 +72,14 @@ class API(object):
         self.settings = settings or dict()
         assert isinstance(self.settings, dict)
 
-        # model (class) to typename
+        # resource class to typename
         self._typenames = dict()
 
         # typename to ...
-        self._models = dict()
-        self._dbs = dict()
+        self._schemas = dict()
+        self._resource_classes = dict()
         self._serializers = dict()
-        self._markups = dict()
+        self._dbs = dict()
 
         #: The global jsonapi object, which is added to each response.
         #:
@@ -141,21 +132,21 @@ class API(object):
         return None
 
 
-    def get_model(self, typename, default=ARG_DEFAULT):
+    def get_resource_class(self, typename, default=ARG_DEFAULT):
         """
-        Returns the model associated with the *typename*.
+        Returns the resource class associated with the *typename*.
 
         :arg str typename:
-            The typename of the model
+            The typename of the resource class
         :arg default:
             A fallback value, if the typename does not exist.
         :raises KeyError:
             If the typename does not exist and no default argument is given.
         """
         if default is ARG_DEFAULT:
-            return self._models[typename]
+            return self._resource_classes[typename]
         else:
-            return self._models.get(typename, default)
+            return self._resource_classes.get(typename, default)
 
     def get_db(self, typename, default=ARG_DEFAULT):
         """
@@ -167,28 +158,30 @@ class API(object):
             A fallback value, if the typename does not exist.
         :raises KeyError:
             If the typename does not exist and no default argument is given.
+        :rtype: jsonapi.base.database.Database
         """
         if default is ARG_DEFAULT:
             return self._dbs[typename]
         else:
             return self._dbs.get(typename, default)
 
-    def get_markup(self, typename, default=ARG_DEFAULT):
+    def get_schema(self, typename, default=ARG_DEFAULT):
         """
-        If the serializer of the type *typename* is based on
-        :mod:`~jsonapi.marker`, the :class:`~jsonapi.marker.Markup` is returned.
+        Returns the JSONapi schema which represents the structure of the
+        resource type with the given typename.
 
         :arg str typename:
         :arg default:
             A fallback value, if the typename does not exist.
         :raises KeyError:
-            If the typename is not associated with a markup and no default
+            If the typename is not associated with a schema and no default
             argument is given.
+        :rtype: jsonapi.base.schema.Schema
         """
         if default is ARG_DEFAULT:
-            return self._markups[typename]
+            return self._schemas[typename]
         else:
-            return self._markups.get(typename, default)
+            return self._schemas.get(typename, default)
 
     def get_serializer(self, typename, default=ARG_DEFAULT):
         """
@@ -233,14 +226,14 @@ class API(object):
         """
         return list(self._typenames.values())
 
-    def has_typename(self, typename):
+    def has_type(self, typename):
         """
-        :arg str typename:
+        Returns True, if the api has a type with the given name and False
+        otherwise.
 
-        :rtype: bool
-        :returns: True, if an type with the *typename* exists.
+        :arg str typename:
         """
-        return typename in self._typenames
+        return typename in self._schemas
 
 
     def dump_json(self, d):
@@ -342,32 +335,25 @@ class API(object):
         else:
             raise ValueError("Unknown endpoint type '{}'".format(endpoint))
 
-    def add_model(self, serializer, db):
+    def add_type(self, schema, db):
         """
         Adds the serializer to the API.
 
-        :arg jsonapi.base.serializer.Serializer serializer:
+        :arg jsonapi.base.schema.Schema schema:
         :arg jsonapi.base.database.Database db:
             The database adapter, which is used to load resource of the type
-            ``serializer.model``.
+            ``schema.resource_class``.
         """
-        typename = serializer.typename
-        model = serializer.model
-
+        # Initialise the database adapter if not yet done.
         if db.api is None:
             db.init_api(self)
         assert db.api is self
 
-        if serializer.api is None:
-            serializer.init_api(self)
-        assert serializer.api is self
-
-        self._typenames[model] = typename
-        self._models[typename] = model
-        self._dbs[typename] = db
-        self._serializers[typename] = serializer
-        if getattr(serializer, "markup", None) is not None:
-            self._markups[typename] = serializer.markup
+        self._typenames[schema.resource_class] = schema.typename
+        self._schemas[schema.typename] = schema
+        self._resource_classes[schema.typename] = schema.resource_class
+        self._serializers[schema.typename] = serializer.Serializer(schema, self)
+        self._dbs[schema.typename] = db
         return None
 
     def _find_handler(self, request):

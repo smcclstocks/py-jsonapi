@@ -1,38 +1,43 @@
 #!/usr/bin/env python3
 
-# py-jsonapi - A toolkit for building a JSONapi
-# Copyright (C) 2016 Benedikt Schmitt <benedikt@benediktschmitt.de>
-#
-# This program is free software: you can redistribute it and/or modify
-# it under the terms of the GNU Affero General Public License as published
-# by the Free Software Foundation, either version 3 of the License, or
-# (at your option) any later version.
-#
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU Affero General Public License for more details.
-#
-# You should have received a copy of the GNU Affero General Public License
-# along with this program.  If not, see <http://www.gnu.org/licenses/>.
-
 """
 jsonapi.marker.method
 =====================
 
-This module contains decorators for **methods**.
+:license: GNU Affero General Public License v3
+:copyright: 2016 by Benedikt Schmitt <benedikt@benediktschmitt.de>
+
+This module contains the decorators for methods.
+
+.. code-block:: python3
+
+    class User(object):
+
+        @attribute()
+        def name(self):
+            return self._name
+
+        @name.setter
+        def set_name(self, name):
+            self._name = name.strip()
+            return None
+
+    # The decorated methods must still be called as methods:
+    user = User()
+    user.set_name("Homer")
+    print(user.name())
 """
 
 # local
-from . import markup
+import jsonapi
 
 
 __all__ = [
-    "Attribute",
-    "IDAttribute",
-    "ToOneRelationship",
-    "ToManyRelationship",
-    "Constructor"
+    "attribute",
+    "id_attribute",
+    "to_one_relationship",
+    "to_many_relationship",
+    "constructor"
 ]
 
 
@@ -40,7 +45,7 @@ class BaseMarker(object):
     """
     This is the base class for the attribute and relationship markers. It
     basically has the same properties as the built-in Python `property()`
-    decorator, but does not turn functions into properties.
+    decorator, but does **not** turn functions into properties.
     However, one can use the :class:`PropertyMixin`, to let it behave like
     a Python `property()`.
 
@@ -91,8 +96,8 @@ class BaseMarker(object):
             def foo(self):
                 return self._foobar
 
-            # This will the constructor first and the `@` will call the object
-            # created with the constructor.
+            # This will call the constructor first and the `@` will call the
+            # object created with the constructor.
         """
         return self.getter(*args, **kargs)
 
@@ -101,10 +106,7 @@ class BaseMarker(object):
         """
         if not resource:
             return self
-
-        def tmp(*args, **kargs):
-            return self.get(resource, *args, **kargs)
-        return tmp
+        return functools.partial(self.get, resource)
 
     def getter(self, f):
         """
@@ -116,7 +118,7 @@ class BaseMarker(object):
             self.__doc__ = f.__doc__
         self.fget = f
 
-        # Note, that we return self.
+        # Please note, that we return *self*.
         return self
 
     def setter(self, f):
@@ -173,7 +175,7 @@ class PropertyMixin(object):
 # Attribute
 # ~~~~~~~~~
 
-class Attribute(BaseMarker, markup.Attribute):
+class attribute(BaseMarker, jsonapi.base.schema.Attribute):
     """
     Can be used to mark JSONapi attributes on a class:
 
@@ -182,6 +184,7 @@ class Attribute(BaseMarker, markup.Attribute):
         class User(object):
 
             # Way 1: As decorator
+            # This will replace the method with a transparent descriptor.
 
             @Attribute()
             def email(self):
@@ -192,17 +195,18 @@ class Attribute(BaseMarker, markup.Attribute):
                 self._email = new_addr
 
             # Way 2: As new attribute
+            # This will not change the method at all.
 
             def last_edited(self):
                 return self._last_edited
 
             jlast_edited = Attribute(fget=last_edited)
 
-    :seealso: :class:`IDAttribute`
+    :seealso: :class:`id_attribute`
     """
 
 
-class IDAttribute(BaseMarker, markup.IDAttribute):
+class id_attribute(BaseMarker, jsonapi.base.schema.IDAttribute):
     """
     Works like :class:`Attribute`, but must be used for the id attribute.
     """
@@ -211,7 +215,7 @@ class IDAttribute(BaseMarker, markup.IDAttribute):
 # Relationships
 # ~~~~~~~~~~~~~
 
-class ToOneRelationship(BaseMarker, markup.ToOneRelationship):
+class to_one_relationship(BaseMarker, jsonapi.base.schema.ToOneRelationship):
     """
     This marker can be used to mark a *to-one* relationship on a class:
 
@@ -219,7 +223,7 @@ class ToOneRelationship(BaseMarker, markup.ToOneRelationship):
 
         class Post(object):
 
-            @ToOneRelationship()
+            @to_one_relationship()
             def author(self):
                 '''
                 This method may either return a JSONapi identifier, a two tuple
@@ -236,11 +240,11 @@ class ToOneRelationship(BaseMarker, markup.ToOneRelationship):
                 self._new_author = new_author
                 return None
 
-    :seealso: :class:`ToManyRelationship`
+    :seealso: :class:`to_many_relationship`
     """
 
 
-class ToManyRelationship(BaseMarker, markup.ToManyRelationship):
+class to_many_relationship(BaseMarker, jsonapi.base.schema.ToManyRelationship):
     """
     This marker can be used to mark a *to-many* relationship on a class:
 
@@ -267,7 +271,8 @@ class ToManyRelationship(BaseMarker, markup.ToManyRelationship):
 
             @comments.remover
             def remove_comment(self, comment):
-                self._comments.remove(comment)
+                if comment in self._comments:
+                    self._comments.remove(comment)
                 return None
 
     :seealso: :class:`ToOneRelationship`
@@ -332,7 +337,7 @@ class ToManyRelationship(BaseMarker, markup.ToManyRelationship):
 # Construction
 # ~~~~~~~~~~~~
 
-class Constructor(classmethod, markup.Constructor):
+class constructor(classmethod, jsonapi.base.schema.Constructor):
     """
     Can be used, to mark a constructor method. Please note, that a constructor
     function is always a **classmethod**.
@@ -344,7 +349,7 @@ class Constructor(classmethod, markup.Constructor):
 
         class User(object):
 
-            @Constructor()
+            @constructor()
             def create(cls, name, email, posts):
                 '''
                 This method receives all attributes and related resources

@@ -1,20 +1,64 @@
 #!/usr/bin/env python3
 
-# py-jsonapi - A toolkit for building a JSONapi
-# Copyright (C) 2016 Benedikt Schmitt <benedikt@benediktschmitt.de>
-#
-# This program is free software: you can redistribute it and/or modify
-# it under the terms of the GNU Affero General Public License as published
-# by the Free Software Foundation, either version 3 of the License, or
-# (at your option) any later version.
-#
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU Affero General Public License for more details.
-#
-# You should have received a copy of the GNU Affero General Public License
-# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+"""
+jsonapi.flask
+=============
+
+:license: GNU Affero General Public License v3
+:copyright: 2016 by Benedikt Schmitt <benedikt@benediktschmitt.de>
+
+The *py-jsonapi* extension for flask. Binding the API to a flask application
+is dead simple:
+
+.. code-block:: python3
+
+    import flask
+    import jsonapi
+    import jsonapi.flask
+
+    app = flask.Flask(__name__)
+    api = jsonapi.flask.FlaskAPI("/api", flask_app=app)
+
+    # You can also initialize the API with the flask application using the
+    # *init_app()* method:
+    api.init_app(app)
+
+You can add the models to the API as usual. They will be available under
+``/api``.
+
+current_api
+-----------
+
+You can access the current APi via the *extensions* dictionary of the flask
+application:
+
+.. code-block:: python3
+
+    app.extensions["jsonapi"]
+
+or you use the global variable ``current_api``:
+
+.. code-block:: python3
+
+    from jsonapi.flask import current_api
+
+The API instance is also added to the jinja environment:
+
+.. code-block:: html
+
+    <p>
+        You can download your profile
+        <a href="{{ jsonapi.reverse_url('User', 'resource', id=current_user.id) }}">
+            here
+        </a>
+    </p>
+
+API
+---
+
+.. autoclass:: FlaskAPI
+.. autodata:: current_api
+"""
 
 # std
 import logging
@@ -50,21 +94,21 @@ def get_request():
     return jsonapi.base.Request(uri, method, headers, body)
 
 
-def to_response(jresponse):
+def to_response(japi_response):
     """
     Transforms the jsonapi response object into a flask response.
     """
-    if jresponse.is_file:
-        fresponse = flask.send_file(jresponse.file)
-    elif jresponse.has_body:
-        fresponse = flask.Response(jresponse.body)
+    if japi_response.is_file:
+        flask_response = flask.send_file(japi_response.file)
+    elif japi_response.has_body:
+        flask_response = flask.Response(japi_response.body)
     else:
-        fresponse = flask.Response("")
+        flask_response = flask.Response("")
 
-    for key, value in jresponse.headers.items():
-        fresponse.headers[str(key)] = value
-    fresponse.status_code = jresponse.status
-    return fresponse
+    for key, value in japi_response.headers.items():
+        flask_response.headers[str(key)] = value
+    flask_response.status_code = japi_response.status
+    return flask_response
 
 
 class FlaskAPI(jsonapi.base.api.API):

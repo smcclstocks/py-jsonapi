@@ -1,33 +1,24 @@
 #!/usr/bin/env python3
 
-# py-jsonapi - A toolkit for building a JSONapi
-# Copyright (C) 2016 Benedikt Schmitt <benedikt@benediktschmitt.de>
-#
-# This program is free software: you can redistribute it and/or modify
-# it under the terms of the GNU Affero General Public License as published
-# by the Free Software Foundation, either version 3 of the License, or
-# (at your option) any later version.
-#
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU Affero General Public License for more details.
-#
-# You should have received a copy of the GNU Affero General Public License
-# along with this program.  If not, see <http://www.gnu.org/licenses/>.
-
 """
-jsonapi.marker.markup
-=====================
+jsonapi.base.schema
+===================
 
-This module contains the base for the attribute and relationships fields and
-the base markup.
+:license: GNU Affero General Public License v3
+:copyright: 2016 by Benedikt Schmitt <benedikt@benediktschmitt.de>
+
+This module defines the base for the schema we use to represent the structure
+of a resource. The schema is used to serialize, create and update a resource.
+
+Because most of the will use an ORM, and therefore already have a metatype
+class, this schema is **not** implemented as meta class.
 
 .. seealso::
 
-    *   :mod:`jsonapi.marker.method` for the method decorators
-    *   :mod:`jsonapi.marker.property` for the property decorators
+    *   :mod:`jsonapi.marker.method` to decorate methods
+    *   :mod:`jsonapi.marker.property` to decorate properties
 """
+
 
 __all__ = [
     "Attribute",
@@ -37,7 +28,7 @@ __all__ = [
     "ToManyRelationship",
     "Constructor",
     "InitConstructor",
-    "Markup"
+    "Schema"
 ]
 
 
@@ -188,25 +179,24 @@ class Constructor(object):
 
 class InitConstructor(Constructor):
     """
-    This constructor simply uses the ``__init__`` method of the *model* class
-    to create a new resource.
+    This constructor simply uses the ``__init__`` method of the *resource_class*
+    class to create a new resource.
 
-    :arg model:
-        The resource class
+    :arg resource_class:
     """
 
-    def __init__(self, model):
-        self.model = model
+    def __init__(self, resource_class):
+        self.resource_class = resource_class
         return None
 
     def create(self, **kargs):
-        return self.model(**kargs)
+        return self.resource_class(**kargs)
 
 
-class Markup(object):
+class Schema(object):
     """
-    Describes how we can serialize a resource using the marker objects defined
-    above:
+    Describes the structure of a resource class. The serializer will use a
+    schema to serialize, create and update a resource.
 
     *   :class:`Constructor`
     *   :class:`Attribute`
@@ -222,19 +212,20 @@ class Markup(object):
         *   Add support for meta objects
             http://jsonapi.org/format/#document-meta
 
-    :arg model:
+    :arg resource_class:
         The resource class
     :arg typename:
-        The typename of the model in the JSONapi
+        The typename of the resource_class in the JSONapi. If not given, we use
+        the name of the resource class.
     """
 
-    def __init__(self, model, typename=None):
+    def __init__(self, resource_class, typename=None):
         """
         """
-        self.model = model
+        self.resource_class = resource_class
         """The resource class"""
 
-        self.typename = model.__name__ if typename is None else typename
+        self.typename = typename or resource_class.__name__
         """
         The typename of the resource class in the API.
         """
@@ -242,8 +233,8 @@ class Markup(object):
         self.constructor = None
         """
         The :class:`Constructor` marker, which can be used to create new
-        instances of the resource. If no constructor is defined on the model,
-        the default `__init__` method is used.
+        instances of the resource. If no special constructor is defined on the
+        resource_class, the default `__init__` method is used.
         """
 
         self.id_attribute = None
@@ -267,23 +258,23 @@ class Markup(object):
         Contains the names of all attributes and relationships.
         """
 
-        self.find_markers()
+        self.find_fields()
         return None
 
-    def find_markers(self):
+    def find_fields(self):
         """
-        We search for marker instances (attributes, relationships, ...),
-        which are defined on the :attr:`model`.
+        We search for fields instances on the :attr:`resource_class`. If we
+        find an attriute, relationship, constructor, ... definition we
+        add it to the schema.
         """
         # Find all markers.
-        for name, prop in vars(self.model).items():
+        for name, prop in vars(self.resource_class).items():
 
             # Constructor
             if isinstance(prop, Constructor):
                 if not self.constructor is None:
                     LOG.warning(
-                        "The constructor has been marked twice on %s.",
-                        self.typename
+                        "Found two constructors on %s.", self.typename
                     )
                 self.constructor = constructor
 
@@ -291,8 +282,7 @@ class Markup(object):
             elif isinstance(prop, IDAttribute):
                 if not self.id_attribute is None:
                     LOG.warning(
-                        "The ID attribute has been marked twice on %s.",
-                        self.typename
+                        "Found two id attributes on %s.", self.typename
                     )
                 self.id_attribute = prop
 
@@ -300,7 +290,7 @@ class Markup(object):
             elif isinstance(prop, Attribute):
                 if prop.name in self.attributes:
                     LOG.warning(
-                        "The '%s' attribute has been marked twice on '%s'.",
+                        "Found the attribute %s twice on %s.",
                         prop.name, self.typename
                     )
                 self.attributes[prop.name] = prop
@@ -310,14 +300,14 @@ class Markup(object):
             elif isinstance(prop, (ToOneRelationship, ToManyRelationship)):
                 if prop.name in self.relationships:
                     LOG.warning(
-                        "The '%s' relationship has been marked twice on '%s'.",
+                        "Found the relationship %s twice on %s.",
                         prop.name, self.typename
                     )
                 self.relationships[prop.name] = prop
                 self.fields.add(prop.name)
 
-        # Use the default constructor, if we no special classmethod has been
+        # Use the default constructor, if no special classmethod has been
         # marked.
         if self.constructor is None:
-            self.constructor = InitConstructor(self.model)
+            self.constructor = InitConstructor(self.resource_class)
         return None

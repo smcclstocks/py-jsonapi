@@ -1,29 +1,16 @@
 #!/usr/bin/env python3
 
-# py-jsonapi - A toolkit for building a JSONapi
-# Copyright (C) 2016 Benedikt Schmitt <benedikt@benediktschmitt.de>
-#
-# This program is free software: you can redistribute it and/or modify
-# it under the terms of the GNU Affero General Public License as published
-# by the Free Software Foundation, either version 3 of the License, or
-# (at your option) any later version.
-#
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU Affero General Public License for more details.
-#
-# You should have received a copy of the GNU Affero General Public License
-# along with this program.  If not, see <http://www.gnu.org/licenses/>.
-
 """
 jsonapi.base.database
 =====================
 
-This module defines some abstract classes, which provide a common interface
-for using databse methods required in a JSONapi flow.
+:license: GNU Affero General Public License v3
+:copyright: 2016 by Benedikt Schmitt <benedikt@benediktschmitt.de>
 
-If you need to implement your own database adapter, you have to subclass
+This module defines some abstract classes, which provide a common interface
+for the database interactions required by a JSONapi flow.
+
+If you want to implement your own database adapter, you must extend
 :class:`Database` and :class:`DatabaseSession` according to their documentation.
 """
 
@@ -32,8 +19,8 @@ from itertools import groupby
 import logging
 
 # local
-from . import utilities
 from . import errors
+from .utilities import ensure_identifier
 from . import validators
 
 
@@ -392,29 +379,30 @@ class BulkSession(object):
             # The include path is a list of relationship names and the
             # first relationship is defined on the *resources*.
             curr_resources = resources
-            for relationship_name in include_path:
+            for relname in include_path:
                 relative_identifiers = set()
                 for resource in curr_resources:
                     typename = self.api.get_typename(resource)
-                    serializer = self.api.get_serializer(typename)
+                    schema_ = self.api.get_schema(typename)
+                    rel = schema_.relationships.get(relname)
 
                     # Raise an exception, if we can not resolve the path.
-                    if not serializer.has_relationship(relationship_name):
+                    if rel is None:
                         raise errors.IncludePathNotFound(include_path)
 
                     # Get the id the related resource (one or None)
-                    elif serializer.is_to_one_relationship(relationship_name):
-                        identifier = serializer.get_relative_id(
-                            resource, relationship_name
-                        )
+                    elif rel.to_one:
+                        identifier = rel.get(resource)
                         if identifier is not None:
+                            identifier = ensure_identifier(self.api, identifier)
                             relative_identifiers.add(identifier)
 
                     # Get the ids of the related resources.
                     else:
-                        identifiers = serializer.get_relative_ids(
-                            resource, relationship_name
-                        )
+                        identifiers = rel.get(resource)
+                        identifiers = [
+                            ensure_identifier(self.api, item) for item in identifiers
+                        ]
                         relative_identifiers.update(identifiers)
 
                 # Load all related resources.

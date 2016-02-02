@@ -1,20 +1,67 @@
 #!/usr/bin/env python3
 
-# py-jsonapi - A toolkit for building a JSONapi
-# Copyright (C) 2016 Benedikt Schmitt <benedikt@benediktschmitt.de>
-#
-# This program is free software: you can redistribute it and/or modify
-# it under the terms of the GNU Affero General Public License as published
-# by the Free Software Foundation, either version 3 of the License, or
-# (at your option) any later version.
-#
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU Affero General Public License for more details.
-#
-# You should have received a copy of the GNU Affero General Public License
-# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+"""
+jsonapi.sqlalchemy
+==================
+
+:license: GNU Affero General Public License v3
+:copyright: 2016 by Benedikt Schmitt <benedikt@benediktschmitt.de>
+
+Contains the *sqlalchemy* database adapter and JSONapi schema.
+
+Tutorial
+--------
+
+If you have an *sqlalchemy* model, use the *sqlalchemy* database adapter and
+the *sqlalchemy* JSONapi schema:
+
+.. code-block:: python3
+
+    schema = jsonapi.sqlalchemy.Serializer(MyModel)
+    db = jsonapi.sqlalchemy.Database(sessionmaker=Session)
+
+However, here is a short example:
+
+.. literalinclude:: ../../examples/sqlalchemy/example.py
+    :linenos:
+    :emphasize-lines: 4, 48, 50-51, 53-54
+
+sessionmaker
+~~~~~~~~~~~~
+
+.. seealso::
+
+    http://docs.sqlalchemy.org/en/latest/orm/session.html
+
+Performing *queries* with *sqlalchemy* requires a *Session*. The database
+adapter requires a function *sessionmaker*, which returns a valid *session*.
+
+You can provide the *sessionmaker* as *init* argument for the database
+adapter:
+
+.. code-block:: python3
+
+    db = jsonapi.sqlalchemy.Database(sessionmaker=get_session)
+
+or you use the *settings* dictionary of the API:
+
+.. code-block:: python3
+
+    api.settings["sqlalchemy_sessionmaker"] = get_session
+
+API
+---
+
+.. automodule:: jsonapi.sqlalchemy.schema
+.. automodule:: jsonapi.sqlalchemy.database
+
+Todo
+----
+
+.. todo::
+
+    Support hybrid methods and properties
+"""
 
 from .database import Database
-from .serializer import Serializer
+from .schema import Schema

@@ -1,24 +1,95 @@
 #!/usr/bin/env python3
 
-# py-jsonapi - A toolkit for building a JSONapi
-# Copyright (C) 2016 Benedikt Schmitt <benedikt@benediktschmitt.de>
-#
-# This program is free software: you can redistribute it and/or modify
-# it under the terms of the GNU Affero General Public License as published
-# by the Free Software Foundation, either version 3 of the License, or
-# (at your option) any later version.
-#
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU Affero General Public License for more details.
-#
-# You should have received a copy of the GNU Affero General Public License
-# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+"""
+jsonapi.marker
+==============
 
-from . import markup
-from .markup import Markup
+:license: GNU Affero General Public License v3
+:copyright: 2016 by Benedikt Schmitt <benedikt@benediktschmitt.de>
+
+This package contains decorators for *attribute* and *relationship* methods
+or properties. They can be used to create a *schema* on the fly.
+
+The base :class:`~jsonapi.base.schema.Schema` find the decorated methods
+automatic.
+
+Tutorial
+--------
+
+.. hint::
+
+    We will use the *property* decorators, which turn the decorated
+    methods into properties. If you don't want to turn the methods into
+    properties, you can use the decorators in :mod:`jsonapi.marker.method`
+    instead of :mod:`jsonapi.marker.property`.
+
+.. hint::
+
+    This tutorial is also available in the examples folder:
+    :file:`examples/marker/tutorial.py`
+
+We will demonstrate the *decorators* on the following example with a *Post*
+model.
+
+.. literalinclude:: ../../examples/marker/tutorial.py
+    :lines: 11-18
+
+id attribute
+~~~~~~~~~~~~
+
+The *IDAttribute* decorator must be used at least **once**, to tell the
+serializer how it can find the id of an instance:
+
+.. literalinclude:: ../../examples/marker/tutorial.py
+    :lines: 21-26
+
+attributes
+~~~~~~~~~~
+
+To mark an attribute, you can use the *Attribute* decorator. If you define no
+setter, the attribute is *read-only* and can not be changed by clients.
+
+The *Attribute* marker accept some arguments. E.g.: If you want the attribute
+to be displayed with a different name in the API, use the *name* argument.
+
+.. literalinclude:: ../../examples/marker/tutorial.py
+    :lines: 29-56
+
+*to-one* relationships
+~~~~~~~~~~~~~~~~~~~~~~
+
+For *to-one* relationships, which can either be *None* or a *resource*,
+you must use the *ToOneRelationship* decorator.
+
+.. literalinclude:: ../../examples/marker/tutorial.py
+    :lines: 59-75
+
+*to-many* relationships
+~~~~~~~~~~~~~~~~~~~~~~~
+
+If you want to mark a *to-many* relationship, which returns a *list* of
+related resources, you must use the *ToManyRelationship* decorator. However, a
+*to-many* relationship also requires an *adder* and *remover*:
+
+.. literalinclude:: ../../examples/marker/tutorial.py
+    :lines: 78-115
+
+Creating the schema
+~~~~~~~~~~~~~~~~~~~
+
+The *Post* model is now complete and we want to create the serializer based on
+our markup:
+
+.. literalinclude:: ../../examples/marker/tutorial.py
+    :lines: 118
+
+API
+---
+
+.. automodule:: jsonapi.marker.method
+.. automodule:: jsonapi.marker.property
+
+"""
 
 from . import method
 from . import property
-from .serializer import Serializer

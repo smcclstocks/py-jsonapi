@@ -21,7 +21,7 @@ import jsonapi.sqlalchemy
 
 Base = sqlalchemy.ext.declarative.declarative_base()
 
-engine = sqlalchemy.create_engine("sqlite://")
+engine = sqlalchemy.create_engine("sqlite:////tmp/blog")#+datetime.datetime.utcnow().ctime())
 
 Session = sqlalchemy.orm.sessionmaker()
 Session.configure(bind=engine)
@@ -34,7 +34,7 @@ class User(Base):
     id = sqlalchemy.Column(sqlalchemy.Integer, primary_key=True)
     name = sqlalchemy.Column("name", sqlalchemy.String(50), nullable=False)
 
-    @jsonapi.marker.method.Attribute()
+    @jsonapi.marker.method.attribute()
     def first_name(self):
         return self.name.split()[0]
 
@@ -84,15 +84,15 @@ def create_api():
     """
     api = jsonapi.flask.FlaskAPI("/api")
 
-    user_serializer = jsonapi.sqlalchemy.Serializer(User)
-    post_serializer = jsonapi.sqlalchemy.Serializer(Post)
-    comment_serializer = jsonapi.sqlalchemy.Serializer(Comment)
+    user_schema = jsonapi.sqlalchemy.Schema(User)
+    post_schema = jsonapi.sqlalchemy.Schema(Post)
+    comment_schema = jsonapi.sqlalchemy.Schema(Comment)
 
     sql_db = jsonapi.sqlalchemy.Database(sessionmaker=Session)
 
-    api.add_model(user_serializer, sql_db)
-    api.add_model(post_serializer, sql_db)
-    api.add_model(comment_serializer, sql_db)
+    api.add_type(user_schema, sql_db)
+    api.add_type(post_schema, sql_db)
+    api.add_type(comment_schema, sql_db)
     return api
 
 
@@ -111,4 +111,4 @@ def create_app():
 
 if __name__ == "__main__":
     app = create_app()
-    app.run()
+    app.run(debug=True)
