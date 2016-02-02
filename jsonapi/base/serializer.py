@@ -103,9 +103,10 @@ class Serializer(object):
             2.) We could simply unpack all values together with *attributes**
                 and **relationships**
         """
-        new_resource = self.schema.constructor.create(
-            **attributes, **relationships
-        )
+        kargs = dict()
+        kargs.update(attributes)
+        kargs.update(relationships)
+        new_resource = self.schema.constructor.create(**kargs)
         return new_resource
 
     def update_attributes(self, resource, d):

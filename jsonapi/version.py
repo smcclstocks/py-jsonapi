@@ -18,7 +18,7 @@
 
 
 #: The current version of this library
-version = "0.1.0b0"
+version = "0.1.1b0"
 
 #: The supported JSONapi version number
 jsonapi_version = "1.0.0"
