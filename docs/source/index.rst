@@ -6,21 +6,21 @@ Welcome to py-jsonapi's documentation!
 
     tutorial/index
     base/index
-    marker/index
+    marker
 
 .. toctree::
     :maxdepth: 1
     :caption: Database drivers
 
-    mongoengine/index
-    sqlalchemy/index
+    mongoengine
+    sqlalchemy
 
 .. toctree::
     :maxdepth: 1
     :caption: Web frameworks
 
-    flask/index
-    tornado/index
+    flask
+    tornado
 
 .. toctree::
     :maxdepth: 1
