@@ -1,11 +1,6 @@
 Blog API Client
 ===============
 
-.. seealso::
-
-    This file is available in the
-    `examples folder <https://github.com/benediktschmitt/py-jsonapi/tree/master/examples/blog>`_.
-
 .. hint::
 
     We support the full basic JSONapi specification. So this example is only

@@ -6,6 +6,12 @@ jsonapi.base.handler
 
 :license: GNU Affero General Public License v3
 :copyright: 2016 by Benedikt Schmitt <benedikt@benediktschmitt.de>
+
+.. automodule:: jsonapi.base.handler.base
+.. automodule:: jsonapi.base.handler.collection
+.. automodule:: jsonapi.base.handler.related
+.. automodule:: jsonapi.base.handler.relationship
+.. automodule:: jsonapi.base.handler.resource
 """
 
 # local

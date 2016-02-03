@@ -5,7 +5,7 @@ Welcome to py-jsonapi's documentation!
     :maxdepth: 1
 
     tutorial/index
-    base/index
+    base
     marker
 
 .. toctree::
@@ -41,7 +41,7 @@ Description
 -----------
 
 This library implements the http://jsonapi.org specification in **Python 3**.
-It is easy to use, extendible and comes support for many web frameworks and
+It is easy to use, extendible and comes with support for many web frameworks and
 database drivers, like :mod:`~jsonapi.flask`, :mod:`~jsonapi.tornado`,
 :mod:`~jsonapi.mongoengine` and :mod:`~jsonapi.sqlalchemy`.
 

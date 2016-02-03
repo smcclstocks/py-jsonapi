@@ -1,1 +1,0 @@
-.. automodule:: jsonapi.base.utilities

@@ -11,7 +11,7 @@ simple *sqlalchemy* powered *flask* application with no front-end.
 
 .. literalinclude:: ../../../examples/blog/app.py
     :lines: 1-2, 8-
-    :emphasize-lines: 81-96
+    :emphasize-lines: 76-91, 100-101
 
 The models are served under:
 
