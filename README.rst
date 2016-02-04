@@ -3,8 +3,8 @@ py-jsonapi
 
 .. note::
 
-    This library is currently in the beta phase.
-    If you have any suggestions or found bugs, please create a new issue.
+    **This library is under active development.**
+    **If you have any suggestions or found bugs, please create a new issue.**
 
 
 This library is a toolkit for building a http://jsonapi.org/ compliant API. It

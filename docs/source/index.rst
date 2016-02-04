@@ -1,6 +1,11 @@
 Welcome to py-jsonapi's documentation!
 ======================================
 
+.. attention::
+
+    This library is under active development. If you have any suggestions,
+    please create an issue on GitHub.
+
 .. toctree::
     :maxdepth: 1
 
