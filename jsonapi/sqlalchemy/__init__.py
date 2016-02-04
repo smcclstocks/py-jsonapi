@@ -24,7 +24,7 @@ However, here is a short example:
 
 .. literalinclude:: ../../examples/sqlalchemy/example.py
     :linenos:
-    :emphasize-lines: 4, 48, 50-51, 53-54
+    :emphasize-lines: 4, 44, 46-47
 
 sessionmaker
 ~~~~~~~~~~~~
