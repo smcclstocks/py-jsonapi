@@ -19,6 +19,7 @@ Welcome to py-jsonapi's documentation!
 
     mongoengine
     sqlalchemy
+    bulk_database
 
 .. toctree::
     :maxdepth: 1

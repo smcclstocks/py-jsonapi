@@ -56,7 +56,7 @@ The API instance is also added to the jinja environment:
 API
 ---
 
-.. autoclass:: FlaskAPI
+.. autoclass:: FlaskAPI    
 .. autodata:: current_api
 """
 

@@ -122,3 +122,95 @@ def collect_identifiers(d):
                 if isinstance(value, (dict, list)):
                     docs.append(value)
     return ids
+
+
+def relative_identifiers(api, resource, relname):
+    """
+    Returns a list with the ids of related resources.
+
+    :arg jsonapi.base.api.API:
+    :arg resource:
+    :arg str relname:
+        The name of the relationship
+
+    :raises RelationshipNotFound:
+
+    .. todo::
+
+        Find a better name for this function.
+    """
+    typename = api.get_typename(resource)
+    schema = api.get_schema(typename)
+    relationship = schema.relationships.get(relname)
+    if relationship is None:
+        raise errors.RelationshipNotFound(relname)
+    elif relationship.to_one:
+        relative = relationship.get(resource)
+        relatives = [relative] if relative else []
+    else:
+        relatives = relationship.get(resource)
+
+    relatives = [
+        ensure_identifier(api, relative) for relative in relatives
+    ]
+    return None
+
+
+def replace_identifiers_in_jsonapi_object(relobj, resources):
+    """
+    .. todo::
+
+        Find a better name for this function.
+
+    Takes a JSONapi relationship object *relobj* and tries to replace each
+    identifier object ``{"id": ..., "type": ...}`` with a resource in
+    *resources*.
+
+    .. code-block:: python3
+
+        >>> relobj
+        {
+            "author": {
+                "data": {"type": "User", "id": 42}
+            },
+            "comments": {
+                "data": [
+                    {"type": "User", "id": "19"},
+                    {"type": "User", "id": "20"}
+                ]
+            }
+            "publisher": {
+                "data": None
+        }
+        >>> relative_ids = collect_identifiers(relobj)
+        >>> relatives = db.get_many(relative_ids)
+        >>> relatives = replace_identifiers_in_jsonapi_object(relobj, relatives)
+        >>> relatives
+        {
+            "author": UserObject(...),
+            "comments": [UserObject(...), UserObject(...)],
+            "publisher": None
+        }
+
+    :arg dict relobj:
+        A JSONapi relationships document.
+    :arg dict resources:
+        A dictionary, containing all resources with an id in the relationships
+        document.
+    """
+    result = dict()
+    for relname in reldoc.keys():
+        # Skip the relationship, if the *data* dictionary is not present.
+        if not "data" in reldoc[relname]:
+            continue
+
+        reldata = reldoc[relname]["data"]
+        if reldata is None:
+            result[relname] = None
+        elif isinstance(reldata, dict):
+            result[relname] = resources[(reldata["type"], reldata["id"])]
+        elif isinstance(reldata, list):
+            result[relname] = [
+                resources[(item["type"], item["id"])] for item in reldata
+            ]
+    return result

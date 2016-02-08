@@ -20,8 +20,8 @@ Using mongoengine models with *py-jsonapi* is quite straightforward:
 API
 ---
 
-.. automodule:: jsonapi.mongoengine.schema
-.. automodule:: jsonapi.mongoengine.database
+.. autoclass:: jsonapi.mongoengine.schema.Schema
+.. autoclass:: jsonapi.mongoengine.database.Database
 """
 
 # local

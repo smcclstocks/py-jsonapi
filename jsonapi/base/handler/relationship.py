@@ -23,10 +23,10 @@ class RelationshipHandler(BaseHandler):
     Handles the relationship endpoint.
     """
 
-    def __init__(self, api, request):
+    def __init__(self, api, db, request):
         """
         """
-        super().__init__(api, request)
+        super().__init__(api, db, request)
         self.typename = request.japi_uri_arguments.get("type")
         self.relname = request.japi_uri_arguments.get("relname")
 

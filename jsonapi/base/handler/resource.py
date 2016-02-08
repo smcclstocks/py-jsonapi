@@ -22,10 +22,10 @@ class ResourceHandler(BaseHandler):
     Handles a resource endpoint.
     """
 
-    def __init__(self, api, request):
+    def __init__(self, api, db, request):
         """
         """
-        super().__init__(api, request)
+        super().__init__(api, db, request)
         self.typename = request.japi_uri_arguments.get("type")
 
         # The *typename* is not sufficent for getting the correct schema and

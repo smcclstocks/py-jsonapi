@@ -21,10 +21,10 @@ class RelatedHandler(BaseHandler):
     Returns the related resources for the resource.
     """
 
-    def __init__(self, api, request):
+    def __init__(self, api, db, request):
         """
         """
-        super().__init__(api, request)
+        super().__init__(api, db, request)
         self.typename = request.japi_uri_arguments.get("type")
         self.relname = request.japi_uri_arguments.get("relname")
 
@@ -69,8 +69,8 @@ class RelatedHandler(BaseHandler):
         """
         # Use the database *fetch_includes()* function, to fetch all resources
         # from the relationship.
-        related_resources = self.db.fetch_includes(
-            [self.resource], [[self.relname]]
+        related_resources = self.db.get_relatives(
+            [self.resource], [self.relname]
         )
 
         # Build the document.

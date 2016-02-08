@@ -23,10 +23,10 @@ class CollectionHandler(BaseHandler):
     Handles the collection endpoint.
     """
 
-    def __init__(self, api, request):
+    def __init__(self, api, db, request):
         """
         """
-        super().__init__(api, request)
+        super().__init__(api, db, request)
         self.typename = request.japi_uri_arguments.get("type")
         self.serializer = api.get_serializer(self.typename, None)
         return None
@@ -61,9 +61,9 @@ class CollectionHandler(BaseHandler):
         )
 
         # Fetch all related resources, which should be included.
-        included_resources = self.db.fetch_includes(
-            resources, self.request.japi_include
-        )
+        included_resources = dict()
+        for path in self.request.japi_include:
+            included_resources.update(self.db.get_relatives(resources, path))
 
         # Build the response.
         data = list()
@@ -120,7 +120,7 @@ class CollectionHandler(BaseHandler):
 
         # Load the related resources.
         relationships = d.get("relationships", dict())
-        relationships = self.db.load_japi_relationships(relationships)
+        relationships = self.db.get_relationships_dict(relationships)
 
         # Get the attributes.
         attributes = d.get("attributes", dict())

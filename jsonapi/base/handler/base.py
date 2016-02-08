@@ -10,22 +10,25 @@ jsonapi.base.handler.base
 
 # local
 from ..response import Response
-from ..database import BulkSession
 from .. import errors
 
 
 class BaseHandler(object):
     """
     The base class for a request handler.
+
+    :arg jsonapi.base.api.API api:
+    :arg jsonapi.base.database.DatabaseSession db:
+    :arg jsonapi.base.request.Request request:
     """
 
-    def __init__(self, api, request):
+    def __init__(self, api, db, request):
         """
         """
         self.api = api
         self.request = request
         self.response = Response()
-        self.db = BulkSession(api)
+        self.db = db
         return None
 
     def prepare(self):

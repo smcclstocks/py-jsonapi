@@ -50,6 +50,8 @@ class API(object):
 
     :arg str uri:
         The root uri of the whole API.
+    :arg jsonapi.base.database.Database db:
+        The database adapter we use to load resources
     :arg bool debug:
         If true, exceptions are not catched and the API is more verbose.
     :arg dict settings:
@@ -79,7 +81,9 @@ class API(object):
         self._schemas = dict()
         self._resource_classes = dict()
         self._serializers = dict()
-        self._dbs = dict()
+
+        # The database adapter we use to load, save and delete resources.
+        self._db = db
 
         #: The global jsonapi object, which is added to each response.
         #:
@@ -102,6 +106,15 @@ class API(object):
         the parent web framework.
         """
         return self._debug
+
+    @property
+    def database(self):
+        """
+        :rtype: jsonapi.base.database.Database
+        :returns:
+            The database the API uses to load, save and delete resources.
+        """
+        return self._db
 
     def _create_routes(self):
         """
@@ -147,23 +160,6 @@ class API(object):
             return self._resource_classes[typename]
         else:
             return self._resource_classes.get(typename, default)
-
-    def get_db(self, typename, default=ARG_DEFAULT):
-        """
-        Returns the database used to load and save resources of the type
-        *typename*.
-
-        :arg str typename:
-        :arg default:
-            A fallback value, if the typename does not exist.
-        :raises KeyError:
-            If the typename does not exist and no default argument is given.
-        :rtype: jsonapi.base.database.Database
-        """
-        if default is ARG_DEFAULT:
-            return self._dbs[typename]
-        else:
-            return self._dbs.get(typename, default)
 
     def get_schema(self, typename, default=ARG_DEFAULT):
         """
@@ -335,25 +331,16 @@ class API(object):
         else:
             raise ValueError("Unknown endpoint type '{}'".format(endpoint))
 
-    def add_type(self, schema, db):
+    def add_type(self, schema):
         """
         Adds the serializer to the API.
 
         :arg jsonapi.base.schema.Schema schema:
-        :arg jsonapi.base.database.Database db:
-            The database adapter, which is used to load resource of the type
-            ``schema.resource_class``.
         """
-        # Initialise the database adapter if not yet done.
-        if db.api is None:
-            db.init_api(self)
-        assert db.api is self
-
         self._typenames[schema.resource_class] = schema.typename
         self._schemas[schema.typename] = schema
         self._resource_classes[schema.typename] = schema.resource_class
         self._serializers[schema.typename] = serializer.Serializer(schema, self)
-        self._dbs[schema.typename] = db
         return None
 
     def _find_handler(self, request):
@@ -388,7 +375,9 @@ class API(object):
 
         try:
             HandlerType = self._find_handler(request)
-            handler = HandlerType(self, request)
+            handler = HandlerType(
+                api=self, db=self._db.session(), request=request
+            )
 
             handler.prepare()
             handler.handle()

@@ -30,7 +30,7 @@ __all__ = [
     "UnsupportedMediaType",
 
     "InvalidDocument",
-    "IncludePathNotFound",
+    "UnresolvableIncludePath",
     "ReadOnlyAttribute",
     "ReadOnlyRelationship",
     "UnsortableField",
@@ -227,7 +227,7 @@ class InvalidDocument(BadRequest):
     :seealso: :mod:`jsonapi.base.validators`
     """
 
-class IncludePathNotFound(BadRequest):
+class UnresolvableIncludePath(BadRequest):
     """
     Raised, if an include path does not exist.
 
@@ -286,5 +286,18 @@ class UnfilterableField(BadRequest):
 
         detail = "The filter '{}' is not supported on the '{}' field."\
             .format(filtername, fieldname)
+        super().__init__(detail=detail, **kargs)
+        return None
+
+
+class RelationshipNotFound(NotFound):
+    """
+    Raised if a relationship does not exist.
+    """
+
+    def __init__(self, relname, **kargs):
+        self.relname = relname
+
+        detail = "The relationship '{}' does not exist.".format(relname)
         super().__init__(detail=detail, **kargs)
         return None

@@ -52,8 +52,8 @@ or you use the *settings* dictionary of the API:
 API
 ---
 
-.. automodule:: jsonapi.sqlalchemy.schema
-.. automodule:: jsonapi.sqlalchemy.database
+.. autoclass:: jsonapi.sqlalchemy.schema.Schema
+.. autoclass:: jsonapi.sqlalchemy.database.Database
 
 Todo
 ----
