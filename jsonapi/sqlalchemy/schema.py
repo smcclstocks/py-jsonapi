@@ -185,8 +185,6 @@ class Schema(jsonapi.base.schema.Schema):
 
     def find_sqlalchemy_markers(self):
         """
-        .. todo:: Ignore the id (primary key) attributes.
-        .. todo:: Ignore the foreign key attributes.
         """
         inspection = sqlalchemy.inspect(self.resource_class)
 
