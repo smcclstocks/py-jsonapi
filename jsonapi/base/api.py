@@ -5,7 +5,6 @@ jsonapi.base.api
 ================
 
 :license: GNU Affero General Public License v3
-:copyright: 2016 by Benedikt Schmitt <benedikt@benediktschmitt.de>
 
 The API application. It handles all requests and knows all available resource
 types.

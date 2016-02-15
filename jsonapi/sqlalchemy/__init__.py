@@ -5,7 +5,6 @@ jsonapi.sqlalchemy
 ==================
 
 :license: GNU Affero General Public License v3
-:copyright: 2016 by Benedikt Schmitt <benedikt@benediktschmitt.de>
 
 Contains the *sqlalchemy* database adapter and JSONapi schema.
 

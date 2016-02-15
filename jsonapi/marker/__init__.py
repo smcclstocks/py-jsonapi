@@ -5,7 +5,6 @@ jsonapi.marker
 ==============
 
 :license: GNU Affero General Public License v3
-:copyright: 2016 by Benedikt Schmitt <benedikt@benediktschmitt.de>
 
 This package contains decorators for *attribute* and *relationship* methods
 or properties. They can be used to create a *schema* on the fly.

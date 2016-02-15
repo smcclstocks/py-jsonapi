@@ -5,7 +5,6 @@ jsonapi.base.pagination
 =======================
 
 :license: GNU Affero General Public License v3
-:copyright: 2016 by Benedikt Schmitt <benedikt@benediktschmitt.de>
 
 This module contains only a helper for the pagination feature:
 http://jsonapi.org/format/#fetching-pagination

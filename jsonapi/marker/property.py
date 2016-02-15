@@ -5,7 +5,6 @@ jsonapi.marker.property
 =======================
 
 :license: GNU Affero General Public License v3
-:copyright: 2016 by Benedikt Schmitt <benedikt@benediktschmitt.de>
 
 This module contains decorators for **properties**.
 

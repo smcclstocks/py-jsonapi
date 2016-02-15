@@ -5,7 +5,6 @@ jsonapi.mongoengine
 ===================
 
 :license: GNU Affero General Public License v3
-:copyright: 2016 by Benedikt Schmitt <benedikt@benediktschmitt.de>
 
 This package contains the database adapter and schema for mongoengine
 documents. It will detect and add mongoengine fields to the jsonapi schema

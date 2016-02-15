@@ -5,7 +5,6 @@ jsonapi.base.schema
 ===================
 
 :license: GNU Affero General Public License v3
-:copyright: 2016 by Benedikt Schmitt <benedikt@benediktschmitt.de>
 
 This module defines the base for the schema we use to represent the structure
 of a resource. The schema is used to serialize, create and update a resource.

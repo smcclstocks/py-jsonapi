@@ -5,7 +5,6 @@ jsonapi.mongoengine.schema
 ==========================
 
 :license: GNU Affero General Public License v3
-:copyright: 2016 by Benedikt Schmitt <benedikt@benediktschmitt.de>
 
 The JSONapi schema for mongoengine documents.
 """

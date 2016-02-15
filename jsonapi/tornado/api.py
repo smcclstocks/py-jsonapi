@@ -5,7 +5,6 @@ jsonapi.tornado.api
 ===================
 
 :license: GNU Affero General Public License v3
-:copyright: 2016 by Benedikt Schmitt <benedikt@benediktschmitt.de>
 """
 
 # third party

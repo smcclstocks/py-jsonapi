@@ -5,7 +5,6 @@ jsonapi.base
 ============
 
 :license: GNU Affero General Public License v3
-:copyright: 2016 by Benedikt Schmitt <benedikt@benediktschmitt.de>
 
 This is the *base* of the *py-jsonapi* library. It contains the definition for
 interfaces (database, serializer), which can be overridden and then used by an

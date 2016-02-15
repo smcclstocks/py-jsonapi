@@ -5,7 +5,6 @@ jsonapi.base.errors
 ===================
 
 :license: GNU Affero General Public License v3
-:copyright: 2016 by Benedikt Schmitt <benedikt@benediktschmitt.de>
 
 This module implements the base class for all JSONapi exceptions:
 http://jsonapi.org/format/#errors

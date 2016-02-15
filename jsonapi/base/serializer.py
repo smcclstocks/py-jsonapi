@@ -5,7 +5,6 @@ jsonapi.base.serializer
 =======================
 
 :license: GNU Affero General Public License v3
-:copyright: 2016 by Benedikt Schmitt <benedikt@benediktschmitt.de>
 
 A JSONapi serializer and unserializer based on the
 :class:`~jsonapi.base.schema.Schema`.

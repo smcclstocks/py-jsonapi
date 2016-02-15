@@ -5,7 +5,6 @@ jsonapi.flask
 =============
 
 :license: GNU Affero General Public License v3
-:copyright: 2016 by Benedikt Schmitt <benedikt@benediktschmitt.de>
 
 The *py-jsonapi* extension for flask. Binding the API to a flask application
 is dead simple:

@@ -5,7 +5,6 @@ jsonapi.bulk_database
 =====================
 
 :license: GNU Affero General Public License v3
-:copyright: 2016 by Benedikt Schmitt <benedikt@benediktschmitt.de>
 
 This package contains a container for other database adapters. If your
 application uses **different database engines**, you can use this adapter, which

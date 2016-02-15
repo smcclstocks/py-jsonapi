@@ -5,7 +5,6 @@ jsonapi.sqlalchemy.schema
 =========================
 
 :license: GNU Affero General Public License v3
-:copyright: 2016 by Benedikt Schmitt <benedikt@benediktschmitt.de>
 
 The *py-jsonapi* schema for *sqlalchemy* models.
 """

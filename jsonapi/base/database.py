@@ -5,7 +5,6 @@ jsonapi.base.database
 =====================
 
 :license: GNU Affero General Public License v3
-:copyright: 2016 by Benedikt Schmitt <benedikt@benediktschmitt.de>
 
 This module defines some abstract classes, which provide a common interface
 for the database interactions required by a JSONapi flow.
@@ -276,7 +275,7 @@ class Session(object):
                     else:
                         relids.update(tmp)
 
-                # Query the relatives from the database.                
+                # Query the relatives from the database.
                 relatives = self.get_many(relids, required=True)
                 all_relatives.update(relatives)
 

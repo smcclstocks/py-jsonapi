@@ -5,7 +5,6 @@ jsonapi.mongoengine.database
 ============================
 
 :license: GNU Affero General Public License v3
-:copyright: 2016 by Benedikt Schmitt <benedikt@benediktschmitt.de>
 
 The database adapter for mongoengine documents.
 """

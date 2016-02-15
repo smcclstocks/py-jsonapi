@@ -5,7 +5,6 @@ jsonapi.base.validators
 =======================
 
 :license: GNU Affero General Public License v3
-:copyright: 2016 by Benedikt Schmitt <benedikt@benediktschmitt.de>
 
 This module contains validators for the different JSONapi document types. If a
 request contains an invalid document, a validator detects the error source and

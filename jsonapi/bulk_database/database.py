@@ -1,5 +1,12 @@
 #!/usr/bin/env python3
 
+"""
+jsonapi.bulk_database.database
+==============================
+
+:license: GNU Affero General Public License v3
+"""
+
 # std
 from itertools import groupby
 

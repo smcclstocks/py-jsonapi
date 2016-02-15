@@ -5,7 +5,6 @@ jsonapi.base.utilities
 ======================
 
 :license: GNU Affero General Public License v3
-:copyright: 2016 by Benedikt Schmitt <benedikt@benediktschmitt.de>
 
 This module contains some helpers, which are frequently needed in different
 modules.

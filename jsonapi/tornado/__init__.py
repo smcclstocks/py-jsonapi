@@ -5,7 +5,6 @@ jsonapi.tornado
 ===============
 
 :license: GNU Affero General Public License v3
-:copyright: 2016 by Benedikt Schmitt <benedikt@benediktschmitt.de>
 
 The *py-jsonapi* extension for tornado. Binding the API to a tornado application
 is as simple as:
