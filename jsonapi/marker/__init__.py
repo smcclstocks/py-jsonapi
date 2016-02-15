@@ -37,7 +37,7 @@ model.
 id attribute
 ~~~~~~~~~~~~
 
-The *IDAttribute* decorator must be used at least **once**, to tell the
+The *id_attribute* decorator must be used at least **once**, to tell the
 serializer how it can find the id of an instance:
 
 .. literalinclude:: ../../examples/marker/tutorial.py
@@ -49,7 +49,7 @@ attributes
 To mark an attribute, you can use the *Attribute* decorator. If you define no
 setter, the attribute is *read-only* and can not be changed by clients.
 
-The *Attribute* marker accept some arguments. E.g.: If you want the attribute
+The *attribute* marker accept some arguments. E.g.: If you want the attribute
 to be displayed with a different name in the API, use the *name* argument.
 
 .. literalinclude:: ../../examples/marker/tutorial.py
@@ -59,7 +59,7 @@ to be displayed with a different name in the API, use the *name* argument.
 ~~~~~~~~~~~~~~~~~~~~~~
 
 For *to-one* relationships, which can either be *None* or a *resource*,
-you must use the *ToOneRelationship* decorator.
+you must use the *to_one_relationship* decorator.
 
 .. literalinclude:: ../../examples/marker/tutorial.py
     :lines: 59-75
@@ -68,7 +68,7 @@ you must use the *ToOneRelationship* decorator.
 ~~~~~~~~~~~~~~~~~~~~~~~
 
 If you want to mark a *to-many* relationship, which returns a *list* of
-related resources, you must use the *ToManyRelationship* decorator. However, a
+related resources, you must use the *to_many_relationship* decorator. However, a
 *to-many* relationship also requires an *adder* and *remover*:
 
 .. literalinclude:: ../../examples/marker/tutorial.py

@@ -82,17 +82,16 @@ def create_api():
     """
     Creates the JSONapi.
     """
-    api = jsonapi.flask.FlaskAPI("/api")
+    db = jsonapi.sqlalchemy.Database(sessionmaker=Session)
+    api = jsonapi.flask.FlaskAPI("/api", db)
 
     user_schema = jsonapi.sqlalchemy.Schema(User)
     post_schema = jsonapi.sqlalchemy.Schema(Post)
     comment_schema = jsonapi.sqlalchemy.Schema(Comment)
 
-    sql_db = jsonapi.sqlalchemy.Database(sessionmaker=Session)
-
-    api.add_type(user_schema, sql_db)
-    api.add_type(post_schema, sql_db)
-    api.add_type(comment_schema, sql_db)
+    api.add_type(user_schema)
+    api.add_type(post_schema)
+    api.add_type(comment_schema)
     return api
 
 

@@ -1,5 +1,8 @@
 #!/usr/bin/env python3
 
+# std
+from itertools import groupby
+
 # local
 import jsonapi
 
@@ -18,11 +21,12 @@ class Database(jsonapi.base.database.Database):
     def __init__(self, api):
         super().__init__(api)
 
+        # typename to database adapter
         self._dbs = dict()
         return None
 
     def session(self):
-        return DatabaseSession(api=self.api, db=self)
+        return Session(api=self.api, db=self)
 
     def get_db(self, typename):
         """
@@ -64,7 +68,7 @@ class Database(jsonapi.base.database.Database):
         return None
 
 
-class Session(jsonapi.base.database.DatabaseSession):
+class Session(jsonapi.base.database.Session):
     """
     Works like the normal session object, but selects for each type the
     correct database adapter and forwards the query to it.
@@ -103,7 +107,7 @@ class Session(jsonapi.base.database.DatabaseSession):
         returned. Otherwise, a new session is created.
 
         :arg jsonapi.base.database.Database db:
-        :rtype: jsonapi.base.database.DatabaseSession
+        :rtype: jsonapi.base.database.Session
         """
         if not db in self._sessions:
             self._sessions[db] = db.session()
@@ -138,7 +142,7 @@ class Session(jsonapi.base.database.DatabaseSession):
 
     def get_many(self, identifiers):
         """
-        :seealso: :meth:`DatabaseSession.get_many`
+        :seealso: :meth:`Session.get_many`
         """
         result = dict()
 

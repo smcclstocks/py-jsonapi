@@ -11,28 +11,19 @@ This module defines some abstract classes, which provide a common interface
 for the database interactions required by a JSONapi flow.
 
 If you want to implement your own database adapter, you must extend
-:class:`Database` and :class:`DatabaseSession` according to their documentation.
+:class:`Database` and :class:`Session` according to their documentation. You
+can take a look at the existing database adapters, if you need an example.
 """
-
-# std
-from itertools import groupby
-import logging
 
 # local
 from . import errors
-from .utilities import (
-    ensure_identifier,
-    relative_identifiers
-)
+from .utilities import relative_identifiers
 
 
 __all__ = [
     "Database",
-    "DatabaseSession"
+    "Session"
 ]
-
-
-LOG = logging.getLogger(__file__)
 
 
 class Database(object):
@@ -64,16 +55,19 @@ class Database(object):
         """
         **Must be overridden**
 
-        Returns a new instance of :class:`DatabaseSession`.
+        Returns a new instance of :class:`Session`.
         """
         raise NotImplementedError()
 
 
-class DatabaseSession(object):
+class Session(object):
     """
     This class defines a base for a database session. A session wraps a
     transaction. Changes made on resources, must only be commited to the
     database, when :meth:`commit` is called.
+
+    If a resource is queried twice, the same object must be returned (The
+    Python :func:`id` must be equal).
 
     :arg jsonapi.base.api.API api:
     """
@@ -153,7 +147,7 @@ class DatabaseSession(object):
         """
         raise NotImplementedError()
 
-    def get(self, identifier):
+    def get(self, identifier, required=False):
         """
         **Must be overridden**
 
@@ -162,10 +156,15 @@ class DatabaseSession(object):
 
         :arg identifier:
             An identifier tuple: ``(typename, id)``
+        :arg bool required:
+            If true, throw a ResourceNotFound error if the resource with the
+            id does not exist.
+
+        :raises jsonapi.base.errors.ResourceNotFound:
         """
         raise NotImplementedError()
 
-    def get_many(self, identifiers):
+    def get_many(self, identifiers, required=False):
         """
         **Must be overridden**
 
@@ -182,6 +181,11 @@ class DatabaseSession(object):
 
         :arg identifiers:
             A list of identifier tuples
+        :arg bool required:
+            If true, throw a ResourceNotFound error if a resource does not
+            exist.
+
+        :raises jsonapi.base.errors.ResourceNotFound:
         """
         raise NotImplementedError()
 
@@ -217,7 +221,7 @@ class DatabaseSession(object):
         """
         raise NotImplementedError()
 
-    def get_relatives(self, resources, path):
+    def get_relatives(self, resources, paths):
         """
         **May be overridden** for performance reasons.
 
@@ -231,7 +235,9 @@ class DatabaseSession(object):
 
         .. code-block:: python3
 
-            db.get_relatives([lisa, bart, maggie], ["parent"])
+            # get_relatives() takes a **list** of paths and
+            # ["parent"] is one path.
+            db.get_relatives([lisa, bart, maggie], [["parent"]])
             [<User (homer)>, <User (marge)>]
 
         :arg list resources:
@@ -248,36 +254,33 @@ class DatabaseSession(object):
 
             *   :attr:`jsonapi.base.request.Request.japi_include`
             *   http://jsonapi.org/format/#fetching-includes
+
+        .. todo::
+
+            *get_relatives()* is not an expressive name for the functionality
+            of this method.
         """
         all_relatives = dict()
-        for relname in path:
-            # Collect the ids of all related resources.
-            relids = set()
-            for resource in resources:
-                try:
-                    tmp = relative_identifiers(self.api, resource, relname)
-                except errors.RelationshipNotFound:
-                    raise errors.UnresolvableIncludePath(path)
-                else:
-                    relids.update(tmp)
+        root_resources = resources
 
-            # Query the relatives from the database.
-            relatives = self.get_many(relids)
-            all_relatives.update(relatives)
+        for path in paths:
+            resources = root_resources
+            for relname in path:
+                # Collect the ids of all related resources.
+                relids = set()
+                for resource in resources:
+                    try:
+                        tmp = relative_identifiers(relname, resource)
+                    except errors.RelationshipNotFound:
+                        raise errors.UnresolvableIncludePath(path)
+                    else:
+                        relids.update(tmp)
 
-            # The next relationship name in the path is defined on the
-            # previously fetched relatives.
-            resources = relatives
+                # Query the relatives from the database.                
+                relatives = self.get_many(relids, required=True)
+                all_relatives.update(relatives)
+
+                # The next relationship name in the path is defined on the
+                # previously fetched relatives.
+                resources = relatives.values()
         return all_relatives
-
-    def get_relationships_dict(self, relobj):
-        """
-        Queries all resources named in the JSONapi relationships object *relobj*
-        and returns a dictionary with the actual resources.
-
-        .. code-block::
-        """
-        ids = collect_identifiers(relobj)
-        relatives = self.get_many(ids)
-        relationships = replace_identifiers_in_jsonapi_object(relobj, relatives)
-        return relationships

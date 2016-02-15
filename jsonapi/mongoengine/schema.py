@@ -150,7 +150,7 @@ class ToOneRelationship(jsonapi.base.schema.ToOneRelationship):
     def set(self, resource, relative):
         return self.me_field.__set__(resource, relative)
 
-    def delete(self, resource):
+    def clear(self, resource):
         return self.me_field.__set__(resource, None)
 
 
@@ -180,7 +180,7 @@ class ToManyRelationship(jsonapi.base.schema.ToManyRelationship):
     def set(self, resource, relatives):
         return self.me_field.__set__(resource, relatives)
 
-    def delete(self, resource):
+    def clear(self, resource):
         return self.me_field.__set__(resource, list())
 
     def add(self, resource, relative):

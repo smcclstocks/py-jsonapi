@@ -10,7 +10,7 @@ jsonapi.base.handler.base
 
 # local
 from ..response import Response
-from .. import errors
+from ..errors import MethodNotAllowed
 
 
 class BaseHandler(object):
@@ -18,7 +18,7 @@ class BaseHandler(object):
     The base class for a request handler.
 
     :arg jsonapi.base.api.API api:
-    :arg jsonapi.base.database.DatabaseSession db:
+    :arg jsonapi.base.database.Session db:
     :arg jsonapi.base.request.Request request:
     """
 
@@ -51,34 +51,34 @@ class BaseHandler(object):
             return self.patch()
         elif self.request.method == "delete":
             return self.delete()
-        raise errors.MethodNotAllowed()
+        raise MethodNotAllowed()
 
     def head(self):
         """
         Handles a HEAD request.
         """
-        raise errors.MethodNotAllowed()
+        raise MethodNotAllowed()
 
     def get(self):
         """
         Handles a GET request.
         """
-        raise error.MethodNotAllowed()
+        raise MethodNotAllowed()
 
     def post(self):
         """
         Handles a POST request.
         """
-        raise error.MethodNotAllowed()
+        raise MethodNotAllowed()
 
     def patch(self):
         """
         Handles a PATCH request.
         """
-        raise error.MethodNotAllowed()
+        raise MethodNotAllowed()
 
     def delete(self):
         """
         Handles a DELETE request.
         """
-        raise error.MethodNotAllowed()
+        raise MethodNotAllowed()

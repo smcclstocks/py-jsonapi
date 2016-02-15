@@ -7,7 +7,8 @@ Blog API Client
     a short demonstration of *py-jsonapi*. Please read the full specification
     at http://jsonapi.org/format/ for more information.
 
-We use the *requests* library in these examples, which is available via PyPi.
+We use the `requests <http://docs.python-requests.org/en/master/>`_ library,
+which is available via PyPi.
 
 Creating Resources
 ------------------
@@ -28,8 +29,9 @@ First of all, we create some users:
             },
             data=json.dumps({
                 "data": {
+                    "type": "User",
                     "attributes": {
-                        "name": name,
+                        "name": name
                     }
                 }
             })
@@ -56,6 +58,7 @@ Next, we write some posts:
             },
             data=json.dumps({
                 "data": {
+                    "type": "Post",
                     "attributes": {
                         "text": text,
                     },
@@ -94,21 +97,16 @@ they can start a shit storm in the comment section:
             },
             data=json.dumps({
                 "data": {
+                    "type": "Comment",
                     "attributes": {
-                        "text": text,
+                        "text": text
                     },
-                    "relationships" :{
+                    "relationships": {
                         "author": {
-                            "data": {
-                                "type": "User",
-                                "id": author_id
-                            },
+                            "data": {"type": "User", "id": author_id}
                         },
                         "post": {
-                            "data": {
-                                "type": "Post",
-                                "id": post_id
-                            }
+                            "data": {"type": "Post", "id": post_id}
                         }
                     }
                 }
@@ -149,22 +147,21 @@ Filter
 .. hint::
 
     The filter keyword is only reserved by the JSONapi specification, but not
-    described. So this *filter* implementation is *py-jsonapi* specific.
+    described. The filter syntax and semantics used here, may differ from
+    other implementations.
 
 .. seealso::
 
     http://jsonapi.org/format/#fetching-filtering
 
-.. seealso::
+You can filter the results by applying one or multiple filters. The filters
+are always combined with a logical ``and``. Which filters are supported and
+which not, depends on the used database driver and schema. You can take a look
+at :attr:`~jsonapi.base.request.Request.japi_filters` for a list of all filter
+names.
 
-    All available filters can be found at the Request class:
-    :attr:`~jsonapi.base.request.Request.japi_filters`.
-
-    Please note, that the support for a filter depends also on the used
-    :class:`~jsonapi.base.database.Database` adapter.
-
-You can filter the results by applying one or multiple filters. In the following
-example, we wan to know all users with ``simpson`` in their name:
+In the following example, we want to know all users with ``simpson`` in their
+name. To get them, we use the case insensitive `icontains` filter:
 
 .. code-block:: python3
 
@@ -184,11 +181,11 @@ example, we wan to know all users with ``simpson`` in their name:
 Limit
 ~~~~~
 
-.. warning::
+.. hint::
 
     This query parameter is not defined by the official JSONapi specification.
 
-You can limit the number of returned resources with *limit* query parameter:
+You can limit the number of returned resources with the *limit* query parameter:
 
 .. code-block:: python3
 
@@ -208,7 +205,7 @@ You can limit the number of returned resources with *limit* query parameter:
 Offset
 ~~~~~~
 
-.. warning::
+.. hint::
 
     This query parameter is not defined by the official JSONapi specification.
 
@@ -242,7 +239,7 @@ We use a page based strategy for the pagination. You can supply the
 ``page[number]`` and ``page[size]`` query parameters. The first page has the
 number **1**.
 
-lease note, that you must supply ``page[size]`` and ``page[number]`` for the
+Please note, that you must supply ``page[size]`` and ``page[number]`` for the
 pagination. If only one parameter is present, the pagination does not work.
 
 The *limit* and *offset* parameters are ignored, if the pagination is used.
@@ -306,15 +303,15 @@ Sorting
     http://jsonapi.org/format/#fetching-sorting
 
 You can sort the resources by applying one or multiple sort criteria.
-To sort the users by the names in ascending order, use ``"+name"`` as
-criterion and ``"-name"`` for descending order.
+To sort the users by their names in ascending order, use ``"+name"`` or
+simply ``"name"`` as criterion and ``"-name"`` for descending order.
 
 If you supply multiple criteria, the resources are grouped by the first
 criterion, then by the second and so on.
 
-Please note, that sorting may be disabled for some fields. The database adapter
-determines the fields which can be sorted. For example: The *sqlalchemy*
-adapter currently supports sorting only for attribute columns.
+Please note, that if a field can be used for sorting or not, is determined by
+the database adapter and the used schema. For example: The *sqlalchemy*
+adapter currently supports sorting only for *attributes*.
 
 .. code-block:: python3
 
@@ -398,7 +395,7 @@ Updating Resources
 
     http://jsonapi.org/format/#crud-updating
 
-Resources are update by performing a *PATCH* request to the resource's uri:
+Resources are updated by performing a *PATCH* request to the resource's uri:
 
 .. code-block:: python3
 
@@ -410,6 +407,8 @@ Resources are update by performing a *PATCH* request to the resource's uri:
             },
             data=json.dumps({
                 "data": {
+                    "type": "User",
+                    "id": user_id,
                     "attributes": {
                         "name": name
                     }
@@ -417,6 +416,8 @@ Resources are update by performing a *PATCH* request to the resource's uri:
             })
         )
         return r.json()
+
+    homer = update_user(homer["id"], "HoMeR SiMpSoN")
 
 Deleting Resources
 ~~~~~~~~~~~~~~~~~~
@@ -439,6 +440,8 @@ uri:
         )
         return r.status_code
 
+    delete_user(murphy["id"])
+
 Relationships Endpoint
 ----------------------
 
@@ -446,9 +449,13 @@ Relationships Endpoint
 
     http://jsonapi.org/format/#fetching-relationships
 
-You can fetch relationships using the *relationships endpoint*.
+You can fetch and manipulate relationships using the *relationships endpoint*.
 
-In the next example, we query the *author* relationship of a user:
+Updating Relationships
+----------------------
+
+To change the author of a post, you must sent a *PATCH* request to the
+relationship endpoint:
 
 .. code-block:: python3
 
@@ -466,6 +473,8 @@ In the next example, we query the *author* relationship of a user:
             })
         )
         return r.json()
+
+    update_post_author(monorail_post["id"], homer["id"])
 
 Deleting Relationships
 ~~~~~~~~~~~~~~~~~~~~~~
@@ -507,12 +516,7 @@ method:
                 "content-type": "application/vnd.api+json"
             },
             data=json.dumps({
-                "data": [
-                    {
-                        "type": "Comment",
-                        "id": str(comment_id)
-                    }
-                ]
+                "data": [{"type": "Comment", "id": str(comment_id)}]
             })
         )
         return r.json()
@@ -524,7 +528,8 @@ Related Resources
 
     http://jsonapi.org/format/#fetching
 
-Related resources can be fetched with a *GET* request to the *related endpoint*:
+Related resources can be easily fetched with a *GET* request to the
+*related* endpoint:
 
 .. code-block:: python3
 

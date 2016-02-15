@@ -25,7 +25,9 @@ __all__ = [
     "InternalServerError",
     "BadRequest",
     "Forbidden",
+    "NotFound",
     "MethodNotAllowed",
+    "NotAcceptable",
     "Conflict",
     "UnsupportedMediaType",
 
@@ -34,7 +36,9 @@ __all__ = [
     "ReadOnlyAttribute",
     "ReadOnlyRelationship",
     "UnsortableField",
-    "UnfilterableField"
+    "UnfilterableField",
+    "RelationshipNotFound",
+    "ResourceNotFound"
 ]
 
 
@@ -134,6 +138,53 @@ class Error(Exception):
         return d
 
 
+class ErrorList(Exception):
+    """
+    Can be used to store a list of exceptions, which occur during the
+    execution of an api request.
+    """
+
+    def __init__(self, errors=None):
+        self.errors = list()
+        if errors:
+            self.extend(errors)
+        return None
+
+    def __bool__(self):
+        """
+        """
+        return bool(self.errors)
+
+    def append(self, error):
+        """
+        """
+        assert isinstance(error, Error)
+        self.errors.append(error)
+
+        # Invalidate the cache.
+        del self.json
+        return None
+
+    def extend(self, error):
+        """
+        """
+        assert isinstance(error, ErrorList)
+        self.errors.extend(error.errors)
+
+        # Invalidate the cache.
+        del self.json
+        return None
+
+    @cached_property
+    def json(self):
+        """
+        Creates the JSONapi error object.
+        http://jsonapi.org/format/#error-objects
+        """
+        d = [err.json for err in self.errors]
+        return d
+
+
 def error_to_response(error, json_dumps):
     """
     Converts an :class:`Error` to a :class:`~jsonapi.base.response.Response`.
@@ -142,14 +193,21 @@ def error_to_response(error, json_dumps):
     :arg json_dumps:
         The json serializer, which is used to serialize :attr:`Error.json`
     :rtype: jsonapi.base.request.Request
+
+    :seealso: http://jsonapi.org/format/#error-objects
     """
+    assert isinstance(error, (Error, ErrorList))
+
     from .response import Response
 
     headers = {
         "content-type": "application/vnd.api+json"
     }
-    body = json_dumps(error.json)
-    body = body.encode()
+
+    if isinstance(error, Error):
+        body = json_dumps({"errors": [error.json]})
+    elif isinstance(error, ErrorList):
+        body = json_dumps({"errors": error.json})
 
     resp = Response(
         status=error.http_status, headers=headers, body=body
@@ -223,9 +281,13 @@ class InvalidDocument(BadRequest):
     """
     Raised, if the structure of a json document in a request body is invalid.
 
+    Please note, that this does not include semantic errors, like a wrong
+    typename.
+
     :seealso: http://jsonapi.org/format/#document-structure
     :seealso: :mod:`jsonapi.base.validators`
     """
+
 
 class UnresolvableIncludePath(BadRequest):
     """
@@ -234,7 +296,7 @@ class UnresolvableIncludePath(BadRequest):
     .. seealso::
 
         *   :attr:`jsonapi.base.request.Request.japi_include`
-        *   :attr:`jsonapi.base.database.DatabaseSession.fetch_includes`
+        *   :attr:`jsonapi.base.database.Session.fetch_includes`
     """
 
     def __init__(self, include_path, **kargs):
@@ -276,15 +338,16 @@ class UnsortableField(BadRequest):
 
 class UnfilterableField(BadRequest):
     """
-    If a filter should be used on a field, which does not suppor the
+    If a filter should be used on a field, which does not support the
     filter.
     """
 
-    def __init__(self, filtername, fieldname, **kargs):
+    def __init__(self, typename, filtername, fieldname, **kargs):
+        self.typename = typename
         self.filtername = filtername
         self.fieldname = fieldname
 
-        detail = "The filter '{}' is not supported on the '{}' field."\
+        detail = "The filter '{}' is not supported on the '{}' field of '{}.'"\
             .format(filtername, fieldname)
         super().__init__(detail=detail, **kargs)
         return None
@@ -295,9 +358,25 @@ class RelationshipNotFound(NotFound):
     Raised if a relationship does not exist.
     """
 
-    def __init__(self, relname, **kargs):
+    def __init__(self, typename, relname, **kargs):
+        self.typename = typename
         self.relname = relname
 
-        detail = "The relationship '{}' does not exist.".format(relname)
+        detail = "The type '{}' has no relationship '{}'."\
+            .format(typename, relname)
+        super().__init__(detail=detail, **kargs)
+        return None
+
+
+class ResourceNotFound(NotFound):
+    """
+    Raised, if a resource does not exist.
+    """
+
+    def __init__(self, identifier, **kargs):
+        self.identifier = identifier
+
+        detail = "The resource (type={}, id={}) does not exist."\
+            .format(*identifier)
         super().__init__(detail=detail, **kargs)
         return None

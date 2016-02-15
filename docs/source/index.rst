@@ -51,8 +51,7 @@ It is easy to use, extendible and comes with support for many web frameworks and
 database drivers, like :mod:`~jsonapi.flask`, :mod:`~jsonapi.tornado`,
 :mod:`~jsonapi.mongoengine` and :mod:`~jsonapi.sqlalchemy`.
 
-Here is a simple API using *flask* and *mongoengine*, in only 5 lines:
+Here is a simple API using *flask* and *mongoengine*:
 
 .. literalinclude:: ../../examples/teaser.py
     :linenos:
-    :emphasize-lines: 8,15-17

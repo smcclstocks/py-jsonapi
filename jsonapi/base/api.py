@@ -7,7 +7,7 @@ jsonapi.base.api
 :license: GNU Affero General Public License v3
 :copyright: 2016 by Benedikt Schmitt <benedikt@benediktschmitt.de>
 
-The API application. Handles all requests and know all available resource
+The API application. It handles all requests and knows all available resource
 types.
 """
 
@@ -58,7 +58,7 @@ class API(object):
         A dictionary containing settings, which may be used by extensions.
     """
 
-    def __init__(self, uri, debug=False, settings=None):
+    def __init__(self, uri, db, debug=False, settings=None):
         """
         """
         # True, if in debug mode.
@@ -71,6 +71,7 @@ class API(object):
         self._routes = list()
         self._create_routes()
 
+        #: A dictionary, containing settings for extensions, the handlers, ...
         self.settings = settings or dict()
         assert isinstance(self.settings, dict)
 
@@ -81,9 +82,11 @@ class API(object):
         self._schemas = dict()
         self._resource_classes = dict()
         self._serializers = dict()
+        self._unserializers = dict()
 
         # The database adapter we use to load, save and delete resources.
         self._db = db
+        db.init_api(self)
 
         #: The global jsonapi object, which is added to each response.
         #:
@@ -193,6 +196,21 @@ class API(object):
             return self._serializers[typename]
         else:
             return self._serializers.get(typename, default)
+
+    def get_unserializer(self, typename, default=ARG_DEFAULT):
+        """
+        Returns the unserializer used to unserialize types of *typename*.
+
+        :arg str typename:
+        :arg default:
+            A fallback value, if the typename does not exist.
+        :raises KeyError:
+            If the typename does not exist and no default argument is given.
+        """
+        if default is ARG_DEFAULT:
+            return self._unserializers[typename]
+        else:
+            return self._unserializers.get(typename, default)
 
     def get_typename(self, o, default=ARG_DEFAULT):
         """
@@ -337,10 +355,25 @@ class API(object):
 
         :arg jsonapi.base.schema.Schema schema:
         """
+        serializer_ = serializer.Serializer(schema)
+        unserializer = serializer.Unserializer(schema)
+        resource_class = schema.resource_class
+
         self._typenames[schema.resource_class] = schema.typename
         self._schemas[schema.typename] = schema
-        self._resource_classes[schema.typename] = schema.resource_class
-        self._serializers[schema.typename] = serializer.Serializer(schema, self)
+        self._resource_classes[schema.typename] = resource_class
+        self._serializers[schema.typename] = serializer_
+        self._unserializers[schema.typename] = unserializer
+
+        # Add some new keys to the _jsonapi attribute of the resource class.
+        resource_class._jsonapi = getattr(resource_class, "_jsonapi", dict())
+        resource_class._jsonapi.update({
+            "typename": schema.typename,
+            "schema": schema,
+            "serializer": serializer_,
+            "unserializer": unserializer,
+            "api": self
+        })
         return None
 
     def _find_handler(self, request):
@@ -381,11 +414,14 @@ class API(object):
 
             handler.prepare()
             handler.handle()
-        except errors.Error as err:
+        except (errors.Error, errors.ErrorList) as err:
             LOG.debug(err, exc_info=False)
-            if self.debug:
-                raise
-            else:
+            if not self.debug:
                 return errors.error_to_response(err, self.dump_json)
+            else:
+                raise
+        except Exception as err:
+            LOG.critical(err, exc_info=True)
+            raise
         else:
             return handler.response

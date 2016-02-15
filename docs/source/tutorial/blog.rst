@@ -11,12 +11,12 @@ simple *sqlalchemy* powered *flask* application with no front-end.
 
 .. literalinclude:: ../../../examples/blog/app.py
     :lines: 1-2, 8-
-    :emphasize-lines: 76-91, 100-101
+    :emphasize-lines: 76-90, 99-100
 
-The models are served under:
+If you run the script, the resources will be available at:
 
 .. code-block:: none
 
-    /api/User
-    /api/Post
-    /api/Comment
+    localhost:5000/api/User
+    localhost:5000/api/Post
+    localhost:5000/api/Comment

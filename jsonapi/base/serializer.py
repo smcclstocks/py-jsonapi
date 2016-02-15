@@ -7,234 +7,317 @@ jsonapi.base.serializer
 :license: GNU Affero General Public License v3
 :copyright: 2016 by Benedikt Schmitt <benedikt@benediktschmitt.de>
 
-A JSONapi serializer based on the :class:`~jsonapi.base.schema.Schema`.
+A JSONapi serializer and unserializer based on the
+:class:`~jsonapi.base.schema.Schema`.
 """
 
 # std
 from collections import OrderedDict
+import logging
 
 # local
-from .utilities import (
-    ensure_identifier,
-    ensure_identifier_object
-)
+from . import errors
+from .utilities import ensure_identifier_object
 
 
 __all__ = [
+    "Unserializer",
     "Serializer"
 ]
 
 
+LOG = logging.getLogger(__file__)
+
+
+class Unserializer(object):
+    """
+    Takes JSONapi documents and updates a resource.
+
+    :arg jsonapi.base.schema.Schema schema:
+        The schema used to update resources
+    """
+
+    def __init__(self, schema):
+        self.schema = schema
+        return None
+
+    def _load_relationships_object(self, db, relationships_object):
+        """
+        Loads all resources referenced in the JSONapi relationships object
+        *relationships_object* and returns a dictionary, which maps the
+        relationship names to the related resources.
+
+        :arg jsonapi.base.database.Session db:
+            The database session used to query the related resources.
+        :arg dict relationships_object:
+            A JSONapi relationships object
+
+        :raises jsonapi.base.errors.NotFound:
+            If a relative does not exist.
+
+        :seealso: http://jsonapi.org/format/#document-resource-object-relationships
+        """
+        # Collect the identifiers.
+        identifiers = set()
+        for relname, relobj in relationships_object.items():
+            reldata = relobj.get("data")
+
+            # *to-one* relationship (with target)
+            # -> a single resource identifier object
+            if isinstance(reldata, dict):
+                identifiers.add((reldata["type"], reldata["id"]))
+
+            # *to-many* relationship
+            # -> a list of resource identifier objects
+            elif isinstance(reldata, list):
+                identifiers.update(
+                    (item["type"], item["id"]) for item in reldata
+                )
+
+        # Load the resources
+        relatives = db.get_many(identifiers, required=True)
+
+        # Map the relationship names back to the related resources.
+        result = dict()
+        for relname, relobj in relationships_object.items():
+            if "data" in relobj:
+                reldata = relobj["data"]
+
+                # *to-one* relationship with no target
+                if reldata is None:
+                    result[relname] = None
+                # *to-one* relationship with target
+                elif isinstance(reldata, dict):
+                    identifier = (reldata["type"], reldata["id"])
+                    result[relname] = relatives[identifier]
+                # *to-many* relationship
+                elif isinstance(reldata, list):
+                    identifiers = [
+                        (item["type"], item["id"]) for item in reldata
+                    ]
+                    result[relname] = [
+                        relatives[identifier] for identifier in identifiers
+                    ]
+        return result
+
+    def create_resource(self, db, resource_object):
+        """
+        Creates a new resource using the JSONapi resource object
+        *resource object*.
+
+        :arg jsonapi.base.database.Session db:
+            The database session used to query related resources.
+        :arg d resource_object:
+            A JSONapi resource object, containing the initial values for
+            the attributes and relationships.
+
+        :seealso: http://jsonapi.org/format/#document-resource-objects
+        """
+        assert resource_object["type"] == self.schema.typename
+
+        # Load all relatives
+        relationships = resource_object.get("relationships", dict())
+        relationships = self._load_relationships_object(db, relationships)
+
+        # Get the attributes
+        attributes = resource_object.get("attributes", dict())
+
+        # Create the new resource.
+        fields = dict()
+        fields.update(attributes)
+        fields.update(relationships)
+        resource = self.schema.constructor.create(**fields)
+        return resource
+
+    def update_resource(self, db, resource, resource_object):
+        """
+        Updates the resource *resource* using the JSONapi resource object
+        *resource_object*.
+
+        :arg jsonapi.base.database.Session db:
+            The database session used to query related resources.
+        :arg resource:
+            The resource, which is updated
+        :arg dict resource_object:
+            A JSONapi resource object containing the new attribute and
+            relationship values.
+
+        :seealso: http://jsonapi.org/format/#document-resource-objects
+        :seealso: http://jsonapi.org/format/#crud-updating
+        """
+        assert resource_object["id"] == self.schema.id_attribute.get(resource)
+        assert resource_object["type"] == self.schema.typename
+
+        # Save all errors, which occur during the update.
+        error_list = errors.ErrorList()
+
+        # Update the attributes
+        if "attributes" in resource_object:
+            try:
+                self.update_attributes(resource, resource_object["attributes"])
+            except errors.Error as err:
+                error_list.append(err)
+            except errors.ErrorList as err:
+                error_list.extend(err)
+
+        # Update the relationships
+        if "relationships" in resource_object:
+            rels_object = resource_object["relationships"]
+            for rel_name, rel_object in rels_object.items():
+                try:
+                    self.update_relationship(db, resource, rel_name, rel_object)
+                except errors.Error as err:
+                    error_list.append(err)
+                except errors.ErrorList as err:
+                    error_list.extend(err)
+
+        if error_list:
+            raise error_list
+        return None
+
+    def update_attributes(self, resource, attributes_object):
+        """
+        Updates the attributes of the resource *resource* using the JSONapi
+        attributes object *attributes_object*.
+
+        :arg resource:
+            The resource, whichs attributes are updated.
+        :arg dict attributes_object:
+            A JSONapi attributes object, containing the new attribute values.
+
+        :seealso: http://jsonapi.org/format/#document-resource-object-attributes
+        """
+        # Save all errors which occur in this error list. This way, the client
+        # can get a feedback about the validation of all attribute values.
+        error_list = errors.ErrorList()
+
+        for name, value in attributes_object.items():
+            attribute = self.schema.attributes[name]
+            try:
+                attribute.set(resource, value)
+            except errors.Error as err:
+                error_list.append(err)
+            except errors.ErrorList as err:
+                error_list.extend(err)
+
+        if error_list:
+            raise error_list
+        return None
+
+    def update_relationship(
+        self, db, resource, relationship_name, relationship_object
+        ):
+        """
+        Updates the relationship with the name *relationship_name* of the
+        resource *resource* using the JSONapi relationship object
+        *relationship_object*.
+
+        :arg jsonapi.base.database.Session db:
+            The database session used to query related resources.
+        :arg resource:
+            The resource, whichs relationships are updated.
+        :arg str relationship_name:
+            The name of the relationship, which is updated.
+        :arg dict relationship_object:
+            A JSONapi relationship object, containing the new relationship
+            values.
+
+        :seealso: http://jsonapi.org/format/#document-resource-object-relationships
+        :seealso: http://jsonapi.org/format/#crud-updating-relationships
+        """
+        relationship = self.schema.relationships[relationship_name]
+
+        # Break if no data key is given.
+        if not "data" in relationship_object:
+            return None
+
+        # Update a *to-one* relationship
+        if relationship.to_one:
+            identifier = relationship_object["data"]
+            if identifier is None:
+                relative = None
+            else:
+                identifier = (identifier["type"], identifier["id"])
+                relative = db.get(identifier, required=True)
+            relationship.set(resource, relative)
+
+        # Update a *to-many* relationship
+        else:
+            identifiers = relationship_object["data"]
+            identifiers = [(item["type"], item["id"]) for item in identifiers]
+
+            relatives = db.get_many(identifiers, required=True)
+            relatives = list(relatives.values())
+
+            relationship.set(resource, relatives)
+        return None
+
+    def extend_relationship(
+        self, db, resource, relationship_name, relationship_object
+        ):
+        """
+        Extends the **to-many** relationship with the name *relationship_name*
+        of the resource *resource* using the JSONapi relationship object
+        *relationship_object*.
+
+        :arg jsonapi.base.database.Session db:
+            The database session used to query related resources.
+        :arg resource:
+            The resource, whichs relationship is extended
+        :arg str relationship_name:
+            The name of the relationship, which is extended
+        :arg dict relationship_object:
+            A JSONapi relationship object, containing identifiers of the new
+            relatives.
+
+        :seealso: http://jsonapi.org/format/#document-resource-object-relationships
+        :seealso: http://jsonapi.org/format/#crud-updating-relationships
+        """
+        relationship = self.schema.relationships[relationship_name]
+        assert relationship.to_many
+
+        if "data" in relationship_object:
+            # Get the identifier tuples of the new relatives.
+            identifiers = relationship_object["data"]
+            identifiers = [(item["type"], item["id"]) for item in identifiers]
+
+            # Load the new relatives.
+            relatives = db.get_many(identifiers, required=True)
+            relatives = list(relatives.values())
+
+            relationship.extend(resource, relatives)
+        return None
+
+    def clear_relationship(self, resource, relationship_name):
+        """
+        Removes all relatives from the relationship with the name
+        *relationship_name* of the resource *resource*.
+
+        :arg resource:
+            The resource, whichs relationship is cleared.
+        :arg str relationship_name:
+            The name oof the relationship, which is cleared.
+
+        :seealso: http://jsonapi.org/format/#crud-updating-relationships
+        """
+        relationship = self.schema.relationships[relationship_name]
+        relationship.clear(resource)
+        return None
+
+
 class Serializer(object):
     """
-    The serializer is the glue between the request handlers and the schema.
-    It receives the JSON data and creates, updates or serializes a resource.
+    A serializer takes a resource and creates a JSONapi document.
 
     :arg jsonapi.base.schema.Schema schema:
         The schema used to serialize resources
-    :arg jsonapi.base.api.API api:
-        The API, which owns the serializer. The api may be given later
-        via :meth:`init_api`.
     """
 
-    def __init__(self, schema, api=None):
+    def __init__(self, schema):
         """
         """
         self.schema = schema
-        self.resource_class = schema.resource_class
-        self.typename = schema.typename
-        self.api = api
         return None
-
-    def init_api(self, api):
-        """
-        The serializer is usually constructed before the API. So this method
-        is called by the api, when the serializer is added.
-
-        :seealso: :meth:`jsonapi.base.api.API.add_model`
-        """
-        self.api = api
-        return None
-
-    # ID
-    # ~~
-
-    def full_id(self, resource):
-        """
-        Returns the type, id pair of the resource.
-
-        .. code-block:: python3
-
-            ("people", "42")
-
-        :arg resource:
-        """
-        return (self.typename, self.schema.id_attribute.get(resource))
-
-    def id(self, resource):
-        """
-        Returns the id of the resource. The id is always a string.
-
-        :arg resource:
-        """
-        return self.schema.id_attribute.get(resource)
-
-    # Creation
-    # ~~~~~~~~
-
-    def create_resource(self, attributes, relationships, meta):
-        """
-        Creates a new resource and returns it.
-
-        :arg dict attributes:
-            Maps the attribute names to their initial values.
-        :arg dict relationships:
-            Maps the relationship names to their initial related resources
-        :arg dict meta:
-            The meta dictionary, received with the request.
-
-        .. todo::
-
-            What shall we do with *meta*?
-
-            1.) We could check if the constructor accepts a keyword with the
-                name **japi_meta** or **meta** and if it does, give it as
-                keyword argument.
-            2.) We could simply unpack all values together with *attributes**
-                and **relationships**
-        """
-        kargs = dict()
-        kargs.update(attributes)
-        kargs.update(relationships)
-        new_resource = self.schema.constructor.create(**kargs)
-        return new_resource
-
-    def update_attributes(self, resource, d):
-        """
-        Updates the resource based upon the dictionary *d*.
-
-        .. code-block:: python3
-
-            {
-                "title": "To TDD or Not",
-                "text": "TLDR; It's complicated... but check your test coverage regardless."
-            }
-
-        :arg resource:
-        :arg dict d:
-
-        :seealso: http://jsonapi.org/format/#crud-updating
-        """
-        for name, value in d.items():
-            attr = self.schema.attributes[name]
-            attr.set(resource, value)
-        return None
-
-    # Relationships
-    # ~~~~~~~~~~~~~
-
-    def has_relationship(self, name):
-        """
-        Returns True, if a relationship with the name *name* exists.
-
-        :arg str name:
-        """
-        return name in self.schema.relationships
-
-    def is_to_one_relationship(self, name):
-        """
-        Returns True, if the relationship is a to-one relationship.
-
-        :arg str name:
-        """
-        rel = self.schema.relationships[name]
-        return rel.to_one
-
-    def is_to_many_relationship(self, name):
-        """
-        Returns True, if the relationship is a to-many relationship.
-
-        :arg str name:
-        """
-        rel = self.schema.relationships[name]
-        return rel.to_many
-
-    def extend_relationship(self, resource, name, relatives):
-        """
-        **Must be overridden**
-
-        Adds the *relatives* to the *to-many* relationship with the name
-        *name*.
-
-        :arg resource:
-        :arg str name:
-        :arg list relatives:
-            A list with the new related resources
-        """
-        rel = self.schema.relationships[name]
-        assert rel.to_many
-        rel.extend(resource, relatives)
-        return None
-
-    def update_relationship(self, resource, name, relatives, meta):
-        """
-        Updates the relationship with the name *name*, so that the related
-        resources match *relatives*.
-
-        :arg resource:
-        :arg str name:
-        :arg relatives:
-            A list of resources for a *to-many* relationship and a single
-            resource or None for a *to-one* relationship.
-        :arg dict meta:
-            The meta dictionary sent with the request.
-
-        .. todo::
-
-            What should we do with *meta*?
-        """
-        rel = self.schma.relationship[name]
-        rel.set(resource, relatives)
-        return None
-
-    def extend_relationship(self, resource, name, relatives, meta):
-        """
-        Adds the resources in *relatives* to the relationship with the name
-        *name*.
-
-        :arg resource:
-        :arg str name:
-        :arg list relatives:
-            The resources, which should be added to the relationship.
-        :arg dict meta:
-            The meta dictionary sent with the request.
-
-        .. todo::
-
-            What should we do with *meta*?
-        """
-        rel = self.schema.relationships[name]
-        assert rel.to_many
-        rel.extend(resource, relatives)
-        return None
-
-    def delete_relationship(self, resource, rel_name, meta):
-        """
-        Removes all related resources from the relationship with the name
-        *rel_name*.
-
-        .. todo::
-
-            What should we do with *meta*?
-        """
-        if self.is_to_one_relationship(rel_name):
-            self.set_relative(resource, rel_name, None)
-        else:
-            self.set_relatives(resource, rel_name, list())
-        return None
-
-    # Serialization
-    # ~~~~~~~~~~~~~
 
     def serialize_resource(self, resource, fields=None):
         """
@@ -323,13 +406,36 @@ class Serializer(object):
             if relative is None:
                 d["data"] = None
             else:
-                d["data"] = ensure_identifier_object(self.api, relative)
+                d["data"] = ensure_identifier_object(relative)
 
         # Serialize a to many relationship.
         else:
             relatives = rel.get(resource)
             relatives = [
-                ensure_identifier_object(self.api, item) for item in relatives
+                ensure_identifier_object(item) for item in relatives
             ]
             d["data"] = relatives
         return d
+
+
+def serialize_many(resources, fields):
+    """
+    Returns a list with the serialized version of all *resources*.
+
+    :arg resources:
+        A list of resources
+    :arg dict fields:
+        A dictionary, mapping the typename to the fields, which should be
+        included in the resource documents
+
+    :seealso: :meth:`Serializer.serialize_resource`
+    :seealso: :meth:`jsonapi.base.request.Request.japi_fields`
+    """
+    data = list()
+    for resource in resources:
+        serializer = resource._jsonapi["serializer"]
+        typename = resource._jsonapi["typename"]
+        data.append(
+            serializer.serialize_resource(resource, fields=fields.get(typename))
+        )
+    return data

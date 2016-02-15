@@ -57,9 +57,6 @@ class Attribute(jsonapi.base.schema.Attribute):
     def set(self, resource, value):
         return self.class_attr.__set__(resource, value)
 
-    def delete(self, resource):
-        return self.class_attr.__delete__(resource)
-
 
 class IDAttribute(jsonapi.base.schema.IDAttribute):
     """
@@ -117,7 +114,7 @@ class ToOneRelationship(jsonapi.base.schema.ToOneRelationship):
     def set(self, resource, relative):
         return self.class_attr.__set__(resource, relative)
 
-    def delete(self, resource):
+    def clear(self, resource):
         return self.class_attr.__delete__(resource)
 
 
@@ -145,7 +142,7 @@ class ToManyRelationship(jsonapi.base.schema.ToManyRelationship):
         self.class_attr.__set__(resource, relatives)
         return None
 
-    def delete(self, resource):
+    def clear(self, resource):
         self.class_attr.__get__(resource, None).clear()
         return None
 

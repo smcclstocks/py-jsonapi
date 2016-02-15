@@ -21,7 +21,7 @@ class Post(object):
     @jsonapi.marker.property.id_attribute()
     def id(self):
         """
-        The id attribute must be marked with the *IDAttribute* decorator.
+        The id attribute must be marked with the *id_attribute* decorator.
         """
         return self._id
 
@@ -29,7 +29,7 @@ class Post(object):
     @jsonapi.marker.property.attribute(name="headline")
     def title(self):
         """
-        Normal attributes can be marked with the *Attribute* decorator.
+        Normal attributes can be marked with the *attribute* decorator.
 
         Because the title is completly derived from the *text* attribute, we
         define no setter. If a client tries to change the value of *title*,
@@ -94,7 +94,7 @@ class Post(object):
     def add_comment(self, comment):
         """
         Because we can add new resources to a *to-many* relationship, the
-        markup must know how to add a new resource to the relationship and
+        schema must know how to add a new resource to the relationship and
         not only how to replace.
         """
         assert isinstance(comment, Comment)

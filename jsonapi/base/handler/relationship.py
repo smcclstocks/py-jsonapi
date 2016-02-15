@@ -14,7 +14,7 @@ from collections import OrderedDict
 # local
 from .. import errors
 from .. import validators
-from ..utilities import ensure_identifier
+from ..serializer import serialize_many
 from .base import BaseHandler
 
 
@@ -30,13 +30,8 @@ class RelationshipHandler(BaseHandler):
         self.typename = request.japi_uri_arguments.get("type")
         self.relname = request.japi_uri_arguments.get("relname")
 
-        # We load the schema and serializer in prepare(), because we need to
-        # know the real typename of the resource. This is only necessary, if
-        # resource is a subtype of self.typename.
+        # Initiliased, after the resource has been loaded.
         self.real_typename = None
-        self.schema = None
-        self.serializer = None
-        self.relationship = None
 
         # The resource is loaded in *prepare()*
         self.resource_id = self.request.japi_uri_arguments.get("id")
@@ -46,11 +41,10 @@ class RelationshipHandler(BaseHandler):
     def prepare(self):
         """
         """
-        if not self.api.has_type(self.typename):
-            raise errors.NotFound()
-
         if self.request.content_type[0] != "application/vnd.api+json":
             raise errors.UnsupportedMediaType()
+        if not self.api.has_type(self.typename):
+            raise errors.NotFound()
 
         # Load the resource.
         self.resource = self.db.get((self.typename, self.resource_id))
@@ -58,31 +52,32 @@ class RelationshipHandler(BaseHandler):
             raise errors.NotFound()
 
         self.real_typename = self.api.get_typename(self.resource)
-        self.schema = self.api.get_schema(self.real_typename)
-        self.serializer = self.api.get_serializer(self.real_typename)
 
         # Check if the relationship exists.
-        if not self.relname in self.schema.relationships:
+        schema = self.api.get_schema(self.real_typename)
+        if not self.relname in schema.relationships:
             raise errors.NotFound()
-        self.relationship = self.schema.relationships[self.relname]
+
+        self.relationship = schema.relationships[self.relname]
         return None
 
     def build_body(self):
         """
         Serializes the relationship and creates the JSONapi body.
         """
-        document = self.serializer.serialize_relationship(
+        serializer = self.api.get_serializer(self.real_typename)
+        document = serializer.serialize_relationship(
             self.resource, self.relname
         )
 
         links = document.setdefault("links", OrderedDict())
         links["self"] = self.api.reverse_url(
-            typename=self.typename, endpoint="relationship", id=self.resource_id,
-            relname=self.relname
+            typename=self.typename, endpoint="relationship",
+            id=self.resource_id, relname=self.relname
         )
         links["related"] = self.api.reverse_url(
-            typename=self.typename, endpoint="related", id=self.resource_id,
-            relname=self.relname
+            typename=self.typename, endpoint="related",
+            id=self.resource_id, relname=self.relname
         )
 
         document.setdefault("jsonapi", self.api.jsonapi_object)
@@ -114,20 +109,14 @@ class RelationshipHandler(BaseHandler):
             raise errors.MethodNotAllowed()
 
         # Get the relationship document from the request.
-        reldoc = self.request.json
-        validators.assert_relationship_document(reldoc)
+        relationship_object = self.request.json
+        validators.assert_relationship_object(relationship_object)
 
-        # Get the new relatives
-        relative_ids = reldoc["data"]
-        relative_ids = [
-            ensure_identifier(self.api, item) for item in relative_ids
-        ]
-
-        relatives = self.db.get_many(relative_ids)
-        relatives = [relatives[(item[0], item[1])] for item in relative_ids]
-
-        # Extend the relationship
-        self.relationship.extend(self.resource, relatives)
+        # Extend the relationship.
+        unserializer = self.api.get_unserializer(self.real_typename)
+        unserializer.extend_relationship(
+            self.db, self.resource, self.relname, relationship_object
+        )
 
         # Save the resource.
         self.db.save([self.resource])
@@ -145,26 +134,15 @@ class RelationshipHandler(BaseHandler):
 
         http://jsonapi.org/format/#crud-updating-relationships
         """
-        reldoc = self.request.json
-        validators.assert_relationship_document(reldoc)
+        # Make sure the request contains a valid JSONapi relationship object.
+        relationship_object = self.request.json
+        validators.assert_relationship_object(relationship_object)
 
-        if self.relationship.to_one:
-            relative_id = reldoc["data"]
-            relative_id = ensure_identifier(self.api, relative_id)
-
-            relative = self.db.get(relative_id)
-
-            self.relationship.set(self.resource, relative)
-        else:
-            relative_ids = reldoc["data"]
-            relative_ids = [
-                ensure_identifier(self.api, item) for item in relative_ids
-            ]
-
-            relatives = self.db.get_many(relative_ids)
-            relatives = [relatives[(item[0], item[1])] for item in relative_ids]
-
-            self.relationship.set(self.resource, relatives)
+        # Patch the relationship.
+        unserializer = self.api.get_unserializer(self.real_typename)
+        unserializer.update_relationship(
+            self.db, self.resource, self.relname, relationship_object
+        )
 
         # Save thte changes.
         self.db.save([self.resource])
@@ -180,7 +158,8 @@ class RelationshipHandler(BaseHandler):
         """
         Handles a DELETE request.
         """
-        self.relationship.delete(self.resource)
+        unserializer = self.api.get_unserializer(self.real_typename)
+        unserializer.clear_relationship(self.resource, self.relname)
 
         # Save the changes
         self.db.save([self.resource])

@@ -21,7 +21,7 @@ from . import schema
 
 __all__ = [
     "Database",
-    "DatabaseSession"
+    "Session"
 ]
 
 
@@ -53,10 +53,10 @@ class Database(jsonapi.base.database.Database):
         return None
 
     def session(self):
-        return DatabaseSession(self.api, self.sessionmaker())
+        return Session(self.api, self.sessionmaker())
 
 
-class DatabaseSession(jsonapi.base.database.DatabaseSession):
+class Session(jsonapi.base.database.Session):
     """
     Implements the database adapter for sqlalchemy models.
 
@@ -207,20 +207,26 @@ class DatabaseSession(jsonapi.base.database.DatabaseSession):
         )
         return query.count()
 
-    def get(self, identifier):
+    def get(self, identifier, required=False):
         """
         """
         typename, resource_id = identifier
         resource_class = self.api.get_resource_class(typename)
         resource = self.sqla_session.query(resource_class).get(resource_id)
+
+        if resource is None:
+            raise jsonapi.base.errors.ResourceNotFound(identifier)
         return resource
 
-    def get_many(self, identifiers):
+    def get_many(self, identifiers, required=False):
         """
-        .. todo:: Make this more efficient.
+        .. todo::
+
+            Can we require them in a bulk?
         """
         resources = {
-            identifier: self.get(identifier) for identifier in identifiers
+            identifier: self.get(identifier, required)\
+            for identifier in identifiers
         }
         return resources
 

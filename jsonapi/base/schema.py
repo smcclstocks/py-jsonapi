@@ -113,6 +113,12 @@ class BaseRelationship(object):
         """
         raise NotImplementedError()
 
+    def clear(self, resource):
+        """
+        **Must be overridden**
+        """
+        raise NotImplementedError()
+
 
 class ToOneRelationship(BaseRelationship):
     """
@@ -121,6 +127,19 @@ class ToOneRelationship(BaseRelationship):
 
     to_one = True
     to_many = False
+
+    def clear(self, resource):
+        """
+        **Can be overridden**
+
+        Default implementation is equal to:
+
+        .. code-block:: python3
+
+            self.set(resource, None)
+        """
+        self.set(resource, None)
+        return None
 
 
 class ToManyRelationship(BaseRelationship):
@@ -153,9 +172,22 @@ class ToManyRelationship(BaseRelationship):
         """
         **Must be overridden**
 
-        Remopves the *relative* from the relationship.
+        Removes the *relative* from the relationship.
         """
         raise NotImplementedError()
+
+    def clear(self, resource):
+        """
+        **Can be overridden**
+
+        Default implementation is equal to:
+
+        .. code-block:: python3
+
+            self.set(resource, list())
+        """
+        self.set(resource, None)
+        return None
 
 
 # Construction

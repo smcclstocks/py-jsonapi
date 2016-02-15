@@ -15,7 +15,6 @@ Using mongoengine models with *py-jsonapi* is quite straightforward:
 
 .. literalinclude:: ../../examples/mongoengine/example.py
     :linenos:
-    :emphasize-lines: 6, 30-31, 35, 40-41
 
 API
 ---

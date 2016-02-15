@@ -24,7 +24,7 @@ from . import schema
 
 __all__ = [
     "Database",
-    "DatabaseSession"
+    "Session"
 ]
 
 
@@ -37,10 +37,10 @@ class Database(jsonapi.base.database.Database):
     def session(self):
         """
         """
-        return DatabaseSession(api=self.api)
+        return Session(api=self.api)
 
 
-class DatabaseSession(jsonapi.base.database.DatabaseSession):
+class Session(jsonapi.base.database.Session):
     """
     Loads mongoengine documents from the database.
     """
@@ -168,15 +168,17 @@ class DatabaseSession(jsonapi.base.database.DatabaseSession):
         )
         return query.count()
 
-    def get(self, identifier):
+    def get(self, identifier, required=False):
         """
         """
         typename, resource_id = identifier
         resource_class = self.api.get_resource_class(typename)
         resource = resource_class.objects(id=resource_id).first()
+        if required and resource is None:
+            raise jsonapi.base.errors.ResourceNotFound(identifier)
         return resource
 
-    def get_many(self, identifiers):
+    def get_many(self, identifiers, required=False):
         """
         """
         results = dict()
@@ -197,6 +199,13 @@ class DatabaseSession(jsonapi.base.database.DatabaseSession):
             resource_ids = [ObjectId(e[1]) for e in identifiers]
             resources = resource_class.objects().in_bulk(resource_ids)
 
+            # Break, if a resource does not exist.
+            not_found = resources.keys() - resource_ids
+            if required and not_found:
+                raise jsonapi.base.errors.ResourceNotFound(
+                    identifier=(typename, not_found.pop())
+                )
+
             results.update({
                 (typename, str(resource_id)): resource\
                 for resource_id, resource in resources.items()
@@ -209,6 +218,10 @@ class DatabaseSession(jsonapi.base.database.DatabaseSession):
 
             Don't save the resources instantly. Wait until :meth:`commit`
             is called.
+
+        .. todo::
+
+            Is there something like *bulk_save()* ?
         """
         for resource in resources:
             resource.save()
@@ -220,6 +233,10 @@ class DatabaseSession(jsonapi.base.database.DatabaseSession):
 
             Don't save the resources instantly. Wait until :meth:`commit`
             is called.
+
+        .. todo::
+
+            Is there something like *bulk_delete()* ?
         """
         for resource in resources:
             resource.delete()

@@ -24,7 +24,6 @@ However, here is a short example:
 
 .. literalinclude:: ../../examples/sqlalchemy/example.py
     :linenos:
-    :emphasize-lines: 4, 44, 46-47
 
 sessionmaker
 ~~~~~~~~~~~~
@@ -60,7 +59,7 @@ Todo
 
 .. todo::
 
-    Support hybrid methods and properties
+    Find hybrid methods and properties
 """
 
 from .database import Database

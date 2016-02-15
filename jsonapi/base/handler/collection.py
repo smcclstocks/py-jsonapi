@@ -14,6 +14,7 @@ from collections import OrderedDict
 # local
 from .. import errors
 from .. import validators
+from ..serializer import serialize_many
 from ..pagination import Pagination
 from .base import BaseHandler
 
@@ -28,16 +29,15 @@ class CollectionHandler(BaseHandler):
         """
         super().__init__(api, db, request)
         self.typename = request.japi_uri_arguments.get("type")
-        self.serializer = api.get_serializer(self.typename, None)
         return None
 
     def prepare(self):
         """
         """
-        if not self.api.has_type(self.typename):
-            raise errors.NotFound()
         if self.request.content_type[0] != "application/vnd.api+json":
             raise errors.UnsupportedMediaType()
+        if not self.api.has_type(self.typename):
+            raise errors.NotFound()
         return None
 
     def get(self):
@@ -61,35 +61,22 @@ class CollectionHandler(BaseHandler):
         )
 
         # Fetch all related resources, which should be included.
-        included_resources = dict()
-        for path in self.request.japi_include:
-            included_resources.update(self.db.get_relatives(resources, path))
+        included_resources = self.db.get_relatives(
+            resources, self.request.japi_include
+        )
 
         # Build the response.
-        data = list()
-        for resource in resources:
-            typename = self.api.get_typename(resource)
-            serializer = self.api.get_serializer(typename)
-            data.append(serializer.serialize_resource(
-                resource, fields=self.request.japi_fields.get(typename)
-            ))
-
-        included = list()
-        for resource in included_resources.values():
-            typename = self.api.get_typename(resource)
-            serializer = self.api.get_serializer(typename)
-            included.append(serializer.serialize_resource(
-                resource, fields=self.request.japi_fields.get(typename)
-            ))
-
+        data = serialize_many(resources, fields=self.request.japi_fields)
+        included = serialize_many(
+            included_resources.values(), fields=self.request.japi_fields
+        )
         meta = OrderedDict()
         links = OrderedDict()
 
         # Add the pagination links, if necessairy.
         if self.request.japi_paginate:
             total_resources = self.db.query_size(
-                self.typename,
-                filters=self.request.japi_filters
+                self.typename, filters=self.request.japi_filters
             )
 
             pagination = Pagination(self.request, total_resources)
@@ -115,31 +102,28 @@ class CollectionHandler(BaseHandler):
 
         http://jsonapi.org/format/#crud-creating
         """
-        d = self.request.json.get("data", dict())
-        validators.assert_resource_document(d, source_pointer="/data/")
-
-        # Load the related resources.
-        relationships = d.get("relationships", dict())
-        relationships = self.db.get_relationships_dict(relationships)
-
-        # Get the attributes.
-        attributes = d.get("attributes", dict())
-
-        # Get the meta values.
-        meta = d.get("meta", dict())
-
-        # Create a new resource.
-        new_resource = self.serializer.create_resource(
-            attributes, relationships, meta
+        # Make sure the request contains a valid JSON resource object.
+        resource_object = self.request.json.get("data", dict())
+        validators.assert_resource_object(
+            resource_object, source_pointer="/data/"
         )
 
+        # Check if the *type* is supported by this collection endpoint.
+        if resource_object["type"] != self.typename:
+            raise errors.Conflict()
+
+        # Create the new resource.
+        unserializer = self.api.get_unserializer(self.typename)
+        resource = unserializer.create_resource(self.db, resource_object)
+
         # Save the resources.
-        self.db.save([new_resource])
+        self.db.save([resource])
         self.db.commit()
 
         # Crate the response.
-        data = self.serializer.serialize_resource(
-            new_resource, fields=self.request.japi_fields.get(self.typename)
+        serializer = self.api.get_serializer(self.typename)
+        data = serializer.serialize_resource(
+            resource, fields=self.request.japi_fields.get(self.typename)
         )
 
         links = data.setdefault("links", dict())

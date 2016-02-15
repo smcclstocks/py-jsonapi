@@ -13,6 +13,7 @@ from collections import OrderedDict
 
 # local
 from .. import errors
+from ..serializer import serialize_many
 from .base import BaseHandler
 
 
@@ -28,10 +29,8 @@ class RelatedHandler(BaseHandler):
         self.typename = request.japi_uri_arguments.get("type")
         self.relname = request.japi_uri_arguments.get("relname")
 
-        # Initialized, when we know the exact typename of the resource.
+        # Initialised after the resource has been loaded.
         self.real_typename = None
-        self.schema = None
-        self.relationship = None
 
         # The resource is loaded in *prepare()*
         self.resource_id = request.japi_uri_arguments.get("id")
@@ -41,11 +40,10 @@ class RelatedHandler(BaseHandler):
     def prepare(self):
         """
         """
-        if not self.api.has_type(self.typename):
-            raise errors.NotFound()
-
         if self.request.content_type[0] != "application/vnd.api+json":
             raise errors.UnsupportedMediaType()
+        if not self.api.has_type(self.typename):
+            raise errors.NotFound()
 
         # Load the resource.
         self.resource = self.db.get((self.typename, self.resource_id))
@@ -53,12 +51,6 @@ class RelatedHandler(BaseHandler):
             raise errors.NotFound()
 
         self.real_typename = self.api.get_typename(self.resource)
-        self.schema = self.api.get_schema(self.real_typename)
-        self.relationship = self.schema.relationships.get(self.relname)
-
-        # Make sure the relationship exists.
-        if self.relationship is None:
-            raise errors.NotFound()
         return None
 
     def get(self):
@@ -67,21 +59,18 @@ class RelatedHandler(BaseHandler):
 
         http://jsonapi.org/format/#fetching-relationships
         """
-        # Use the database *fetch_includes()* function, to fetch all resources
-        # from the relationship.
-        related_resources = self.db.get_relatives(
-            [self.resource], [self.relname]
+        resources = self.db.get_relatives([self.resource], [[self.relname]])
+        resources = resources.values()
+
+        included_resources = self.db.get_relatives(
+            resources, self.request.japi_include
         )
 
         # Build the document.
-        data = list()
-        for resource in related_resources.values():
-            typename = self.api.get_typename(resource)
-            serializer = self.api.get_serializer(typename)
-            data.append(serializer.serialize_resource(
-                resource, fields=self.request.japi_fields.get(typename)
-            ))
-
+        data = serialize_many(resources, fields=self.request.japi_fields)
+        included = serialize_many(
+            included_resources.values(), fields=self.request.japi_fields
+        )
         meta = OrderedDict()
         links = OrderedDict()
 
@@ -90,6 +79,7 @@ class RelatedHandler(BaseHandler):
         self.response.status_code = 200
         self.response.body = self.api.dump_json(OrderedDict([
             ("data", data),
+            ("included", included),
             ("meta", meta),
             ("links", links),
             ("jsonapi", self.api.jsonapi_object)

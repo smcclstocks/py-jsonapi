@@ -17,7 +17,7 @@ is dead simple:
     import jsonapi.flask
 
     app = flask.Flask(__name__)
-    api = jsonapi.flask.FlaskAPI("/api", flask_app=app)
+    api = jsonapi.flask.FlaskAPI("/api", db=..., flask_app=app)
 
     # You can also initialize the API with the flask application using the
     # *init_app()* method:
@@ -56,7 +56,7 @@ The API instance is also added to the jinja environment:
 API
 ---
 
-.. autoclass:: FlaskAPI    
+.. autoclass:: FlaskAPI
 .. autodata:: current_api
 """
 
@@ -117,10 +117,10 @@ class FlaskAPI(jsonapi.base.api.API):
     later via :meth:`init_app`.
     """
 
-    def __init__(self, uri, settings=None, flask_app=None):
+    def __init__(self, uri, db, settings=None, flask_app=None):
         """
         """
-        super().__init__(uri=uri, settings=settings)
+        super().__init__(uri=uri, db=db, settings=settings)
 
         self._flask_app = None
         if flask_app is not None:
@@ -157,16 +157,18 @@ class FlaskAPI(jsonapi.base.api.API):
             )
 
         self._flask_app = app
-        app.extensions = getattr(app, "extensions", dict())
-        app.extensions["jsonapi"] = self
 
         # Add the url rule.
         app.add_url_rule(
-            rule=self._uri + "/<path:path>",
-            endpoint="jsonapi",
-            view_func=self.handle_request,
-            methods=["get", "post", "patch", "delete", "head"]
+        rule=self._uri + "/<path:path>",
+        endpoint="jsonapi",
+        view_func=self.handle_request,
+        methods=["get", "post", "patch", "delete", "head"]
         )
+
+        # Register the jsonapi extension on the flask application.
+        app.extensions = getattr(app, "extensions", dict())
+        app.extensions["jsonapi"] = self
 
         # Add the api to the jinja environment
         app.jinja_env.globals["jsonapi"] = current_api

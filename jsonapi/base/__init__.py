@@ -32,6 +32,6 @@ from . import errors
 from .request import Request
 from .response import Response
 from . import schema
-from .serializer import Serializer
+from . import serializer
 from . import utilities
 from . import validators

@@ -40,11 +40,11 @@ class Post(Base):
 
 
 # Create the API and add the models.
-api = jsonapi.base.api.API("/api")
-sql_db = jsonapi.sqlalchemy.Database(sessionmaker=Session)
+db = jsonapi.sqlalchemy.Database(sessionmaker=Session)
+api = jsonapi.base.api.API("/api", db)
 
 user_schema = jsonapi.sqlalchemy.Schema(User)
 post_schema = jsonapi.sqlalchemy.Schema(Post)
 
-api.add_type(user_schema, sql_db)
-api.add_type(post_schema, sql_db)
+api.add_type(user_schema)
+api.add_type(post_schema)
