@@ -190,8 +190,16 @@ class Schema(jsonapi.base.schema.Schema):
         """
         inspection = sqlalchemy.inspect(self.resource_class)
 
+        # Ignore the attributes used as primary key and relationship ids.
+        ignore_columns = set()
+        ignore_columns.update(col.key for col in inspection.primary_key)
+
         # Find the relationships
         for sql_rel in inspection.relationships.values():
+
+            # Ignore the attributes, which are used as foreign keys.
+            ignore_columns.update(col.key for col in sql_rel.local_columns)
+
             if sql_rel.key.startswith("_"):
                 continue
             if sql_rel.key in self.fields:
@@ -218,12 +226,14 @@ class Schema(jsonapi.base.schema.Schema):
                 continue
             if sql_attr.key in self.fields:
                 continue
+            if sql_attr.key in ignore_columns:
+                continue
 
             attr = Attribute(self.resource_class, sql_attr)
             self.attributes[attr.name] = attr
             self.fields.add(attr.name)
 
-        # Use the primary id of the resource_class, if not id marker is set.
+        # Use the primary id of the resource_class, if no id marker is set.
         if self.id_attribute is None:
             self.id_attribute = IDAttribute(self.resource_class)
         return None
