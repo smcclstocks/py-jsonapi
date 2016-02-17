@@ -99,10 +99,10 @@ class TornadoAPI(jsonapi.base.api.API):
     Integrates *py-jsonapi* into a tornado application.
     """
 
-    def __init__(self, uri, settings=None, tornado_app=None):
+    def __init__(self, uri, db, settings=None, tornado_app=None):
         """
         """
-        super().__init__(uri=uri, settings=settings)
+        super().__init__(uri=uri, db=db, settings=settings)
 
         self._tornado_app = None
         if tornado_app is not None:
