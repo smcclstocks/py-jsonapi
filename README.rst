@@ -31,8 +31,7 @@ https://py-jsonapi.readthedocs.org.
 License
 -------
 
-This library is licensed under the
-`GNU Affero General Public License v3 <./LICENSE>`_.
+This library is licensed under the `MIT License <./LICENSE>`_.
 
 
 Contributions and questions
