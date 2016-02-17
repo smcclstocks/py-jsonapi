@@ -7,6 +7,9 @@ jsonapi.tornado.api
 :license: GNU Affero General Public License v3
 """
 
+# std
+import asyncio
+
 # third party
 import tornado
 import tornado.web
@@ -33,7 +36,7 @@ class Handler(tornado.web.RequestHandler):
         self.jsonapi = jsonapi
         return None
 
-    @tornado.gen.coroutine
+    @asyncio.coroutine
     def prepare(self):
         """
         .. hint::
@@ -48,7 +51,7 @@ class Handler(tornado.web.RequestHandler):
         )
 
         # Let the API handle it.
-        resp = self.jsonapi.handle_request(request)
+        resp = yield from self.jsonapi.handle_request(request)
 
         # Create the response.
         for key, value in resp.headers.items():
@@ -94,7 +97,7 @@ class Handler(tornado.web.RequestHandler):
         return None
 
 
-class TornadoAPI(jsonapi.base.api.API):
+class TornadoAPI(jsonapi.asyncio.api.API):
     """
     Integrates *py-jsonapi* into a tornado application.
     """
