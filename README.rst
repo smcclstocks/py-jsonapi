@@ -14,6 +14,7 @@ has built in support for many web frameworks and database drivers:
 *   tornado
 *   sqlalchemy
 *   mongoengine
+*   motorengine
 
 Furthermore, it can be extended to work with **all web frameworks and database
 engines**.
