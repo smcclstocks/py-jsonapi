@@ -11,6 +11,7 @@ Welcome to py-jsonapi's documentation!
 
     tutorial/index
     base
+    asyncio
     marker
 
 .. toctree::
@@ -18,6 +19,7 @@ Welcome to py-jsonapi's documentation!
     :caption: Database drivers
 
     mongoengine
+    motorengine
     sqlalchemy
     bulk_database
 

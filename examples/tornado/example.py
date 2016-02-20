@@ -19,7 +19,10 @@ class User(motorengine.Document):
 
     name = motorengine.StringField()
     email = motorengine.EmailField()
-    posts = motorengine.ListField(motorengine.ReferenceField("__main__.Post"))
+
+    @jsonapi.marker.method.attribute()
+    def greetings_earthling(self):
+        return "Greetings, earthling {}!".format(self.name)
 
 
 class Post(motorengine.Document):

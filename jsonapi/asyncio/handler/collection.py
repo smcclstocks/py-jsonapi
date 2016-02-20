@@ -1,13 +1,34 @@
 #!/usr/bin/env python3
 
+# The MIT License (MIT)
+#
+# Copyright (c) 2016 Benedikt Schmitt
+#
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to deal
+# in the Software without restriction, including without limitation the rights
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+#
+# The above copyright notice and this permission notice shall be included in all
+# copies or substantial portions of the Software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+# SOFTWARE.
+
 """
 jsonapi.asyncio.handler.collection
 ==================================
-
-:license: GNU Affero General Public License v3
 """
 
 # std
+import asyncio
 from collections import OrderedDict
 
 # local
@@ -30,6 +51,7 @@ class CollectionHandler(BaseHandler):
         self.typename = request.japi_uri_arguments.get("type")
         return None
 
+    @asyncio.coroutine
     def prepare(self):
         """
         """
@@ -39,7 +61,8 @@ class CollectionHandler(BaseHandler):
             raise errors.NotFound()
         return None
 
-    async def get(self):
+    @asyncio.coroutine
+    def get(self):
         """
         Handles a GET request. This means to fetch many resourcs from the
         collection and return it.
@@ -54,13 +77,13 @@ class CollectionHandler(BaseHandler):
             offset = self.request.japi_offset
             limit = self.request.japi_limit
 
-        resources = await self.db.query(
+        resources = yield from self.db.query(
             self.typename, order=self.request.japi_sort, limit=limit,
             offset=offset, filters=self.request.japi_filters
         )
 
         # Fetch all related resources, which should be included.
-        included_resources = await self.db.get_relatives(
+        included_resources = yield from self.db.get_relatives(
             resources, self.request.japi_include
         )
 
@@ -74,7 +97,7 @@ class CollectionHandler(BaseHandler):
 
         # Add the pagination links, if necessairy.
         if self.request.japi_paginate:
-            total_resources = await self.db.query_size(
+            total_resources = yield from self.db.query_size(
                 self.typename, filters=self.request.japi_filters
             )
 
@@ -94,7 +117,8 @@ class CollectionHandler(BaseHandler):
         ]))
         return None
 
-    async def post(self):
+    @asyncio.coroutine
+    def post(self):
         """
         Handles a POST request. This means to create a new resource and to
         return it.
@@ -113,11 +137,13 @@ class CollectionHandler(BaseHandler):
 
         # Create the new resource.
         unserializer = self.api.get_unserializer(self.typename)
-        resource = await unserializer.create_resource(self.db, resource_object)
+        resource = yield from unserializer.create_resource(
+            self.db, resource_object
+        )
 
         # Save the resources.
         self.db.save([resource])
-        await self.db.commit()
+        yield from self.db.commit()
 
         # Crate the response.
         serializer = self.api.get_serializer(self.typename)

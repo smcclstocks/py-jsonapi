@@ -1,17 +1,36 @@
 #!/usr/bin/env python3
 
+# The MIT License (MIT)
+#
+# Copyright (c) 2016 Benedikt Schmitt
+#
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to deal
+# in the Software without restriction, including without limitation the rights
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+#
+# The above copyright notice and this permission notice shall be included in all
+# copies or substantial portions of the Software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+# SOFTWARE.
+
 """
 jsonapi.asyncio.api
 ===================
-
-:license: GNU Affero General Public License v3
 
 API base application for asynchronous web frameworks.
 """
 
 # std
 import asyncio
-import re
 import logging
 
 # local
@@ -36,44 +55,33 @@ class API(jsonapi.base.api.API):
 
     def _create_routes(self):
         """
-        The same as the base class method, but uses our asynchronous handlers.
+        We use our own *asynchronous* handlers. So we have to override this
+        method.
         """
-        base_url = self._uri.rstrip("/")
-
-        collection = base_url + "/(?P<type>[A-z][A-z0-9]*)"
-        resource = collection + "/(?P<id>[A-z0-9]+)"
-        relationships = resource + "/relationships/(?P<relname>[A-z][A-z0-9]*)"
-        related = resource + "/(?P<relname>[A-z][A-z0-9]*)"
-
-        # Make the rules insensitive against a trailing "/"
-        collection = re.compile(collection + "/?")
-        resource = re.compile(resource + "/?")
-        relationships = re.compile(relationships + "/?")
-        related = re.compile(related + "/?")
-
-        # Add the routes.
+        uris = jsonapi.base.api.build_uris(self._uri)
         self._routes.extend([
-            (collection, handler.CollectionHandler),
-            (resource, handler.ResourceHandler),
-            (relationships, handler.RelationshipHandler),
-            (related, handler.RelatedHandler)
+            (uris["collection"], handler.CollectionHandler),
+            (uris["related"], handler.RelatedHandler),
+            (uris["resource"], handler.ResourceHandler),
+            (uris["relationships"], handler.RelationshipHandler)
         ])
         return None
 
-    def add_type(self, schema):
+    def add_type(self, schema, **kargs):
         """
+        The same as :meth:`~jsonapi.base.api.API.add_type`, but uses the
+        asynchronous :class:`~jsonapi.asyncio.unserializer.Unserializer` as
+        default.
         """
-        super().add_type(schema)
-
-        unserializer = serializer.Unserializer(schema)
-        self._unserializers[schema.typename] = unserializer
-        schema.resource_class._jsonapi["unserializer"] = unserializer
+        if not "unserializer" in kargs:
+            kargs["unserializer"] = serializer.Unserializer(schema)
+        super().add_type(schema, **kargs)
         return None
 
-    async def handle_request(self, request):
+    @asyncio.coroutine
+    def handle_request(self, request):
         """
         """
-        assert request.api is None or request.api is self
         request.api = self
 
         try:
@@ -82,14 +90,12 @@ class API(jsonapi.base.api.API):
                 api=self, db=self._db.session(), request=request
             )
 
-            if asyncio.iscoroutinefunction(handler.prepare):
-                await handler.prepare()
-            else:
-                handler.prepare()
-
-            await handler.handle()
+            yield from handler.prepare()
+            yield from handler.handle()
         except (errors.Error, errors.ErrorList) as err:
-            LOG.debug(err, exc_info=False)
+            #LOG.debug(err, exc_info=False)
+            print("DEBUG", self.debug)
+            print()
             if not self.debug:
                 return errors.error_to_response(err, self.dump_json)
             else:

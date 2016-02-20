@@ -1,13 +1,34 @@
 #!/usr/bin/env python3
 
+# The MIT License (MIT)
+#
+# Copyright (c) 2016 Benedikt Schmitt
+#
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to deal
+# in the Software without restriction, including without limitation the rights
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+#
+# The above copyright notice and this permission notice shall be included in all
+# copies or substantial portions of the Software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+# SOFTWARE.
+
 """
 jsonapi.asyncio.handler.relationship
 ====================================
-
-:license: GNU Affero General Public License v3
 """
 
 # std
+import asyncio
 from collections import OrderedDict
 
 # local
@@ -37,7 +58,8 @@ class RelationshipHandler(BaseHandler):
         self.resource = None
         return None
 
-    async def prepare(self):
+    @asyncio.coroutine
+    def prepare(self):
         """
         """
         if self.request.content_type[0] != "application/vnd.api+json":
@@ -46,7 +68,7 @@ class RelationshipHandler(BaseHandler):
             raise errors.NotFound()
 
         # Load the resource.
-        self.resource = await self.db.get((self.typename, self.resource_id))
+        self.resource = yield from self.db.get((self.typename, self.resource_id))
         if self.resource is None:
             raise errors.NotFound()
 
@@ -84,7 +106,8 @@ class RelationshipHandler(BaseHandler):
         body = self.api.dump_json(document)
         return body
 
-    async def get(self):
+    @asyncio.coroutine
+    def get(self):
         """
         Handles a GET request.
 
@@ -95,7 +118,8 @@ class RelationshipHandler(BaseHandler):
         self.response.body = self.build_body()
         return None
 
-    async def post(self):
+    @asyncio.coroutine
+    def post(self):
         """
         Handles a POST request.
 
@@ -113,13 +137,13 @@ class RelationshipHandler(BaseHandler):
 
         # Extend the relationship.
         unserializer = self.api.get_unserializer(self.real_typename)
-        await unserializer.extend_relationship(
+        yield from unserializer.extend_relationship(
             self.db, self.resource, self.relname, relationship_object
         )
 
         # Save the resource.
         self.db.save([self.resource])
-        await self.db.commit()
+        yield from self.db.commit()
 
         # Build the response
         self.response.headers["content-type"] = "application/vnd.api+json"
@@ -127,7 +151,8 @@ class RelationshipHandler(BaseHandler):
         self.response.body = self.build_body()
         return None
 
-    async def patch(self):
+    @asyncio.coroutine
+    def patch(self):
         """
         Handles a PATCH request.
 
@@ -139,13 +164,13 @@ class RelationshipHandler(BaseHandler):
 
         # Patch the relationship.
         unserializer = self.api.get_unserializer(self.real_typename)
-        await unserializer.update_relationship(
+        yield from unserializer.update_relationship(
             self.db, self.resource, self.relname, relationship_object
         )
 
         # Save thte changes.
         self.db.save([self.resource])
-        await self.db.commit()
+        yield from self.db.commit()
 
         # Build the response
         self.response.headers["content-type"] = "application/vnd.api+json"
@@ -153,7 +178,8 @@ class RelationshipHandler(BaseHandler):
         self.response.body = self.build_body()
         return None
 
-    async def delete(self):
+    @asyncio.coroutine
+    def delete(self):
         """
         Handles a DELETE request.
         """
@@ -162,7 +188,7 @@ class RelationshipHandler(BaseHandler):
 
         # Save the changes
         self.db.save([self.resource])
-        await self.db.commit()
+        yield from self.db.commit()
 
         # Build the response
         self.response.headers["content-type"] = "application/vnd.api+json"

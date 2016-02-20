@@ -1,15 +1,36 @@
 #!/usr/bin/env python3
 
+# The MIT License (MIT)
+#
+# Copyright (c) 2016 Benedikt Schmitt
+#
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to deal
+# in the Software without restriction, including without limitation the rights
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+#
+# The above copyright notice and this permission notice shall be included in all
+# copies or substantial portions of the Software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+# SOFTWARE.
+
 """
 jsonapi.asyncio.serializer
 ==========================
-
-:license: GNU Affero General Public License v3
 
 Contains an *unserializer* that works with asynchronous database drivers.
 """
 
 # std
+import asyncio
 import logging
 
 # local
@@ -31,7 +52,8 @@ class Unserializer(jsonapi.base.serializer.Unserializer):
     with *await*.
     """
 
-    async def _load_relationships_object(self, db, relationships_object):
+    @asyncio.coroutine
+    def _load_relationships_object(self, db, relationships_object):
         """
         The same as the base class method, but calls the *db* async.
         """
@@ -53,7 +75,7 @@ class Unserializer(jsonapi.base.serializer.Unserializer):
                 )
 
         # Load the resources
-        relatives = await db.get_many(identifiers, required=True)
+        relatives = yield from db.get_many(identifiers, required=True)
 
         # Map the relationship names back to the related resources.
         result = dict()
@@ -78,7 +100,8 @@ class Unserializer(jsonapi.base.serializer.Unserializer):
                     ]
         return result
 
-    async def create_resource(self, db, resource_object):
+    @asyncio.coroutine
+    def create_resource(self, db, resource_object):
         """
         The same as the base class method, but calls *db* async.
         """
@@ -86,7 +109,7 @@ class Unserializer(jsonapi.base.serializer.Unserializer):
 
         # Load all relatives
         relationships = resource_object.get("relationships", dict())
-        relationships = await self._load_relationships_object(db, relationships)
+        relationships = yield from self._load_relationships_object(db, relationships)
 
         # Get the attributes
         attributes = resource_object.get("attributes", dict())
@@ -98,7 +121,8 @@ class Unserializer(jsonapi.base.serializer.Unserializer):
         resource = self.schema.constructor.create(**fields)
         return resource
 
-    async def update_resource(self, db, resource, resource_object):
+    @asyncio.coroutine
+    def update_resource(self, db, resource, resource_object):
         """
         The same as the base class method, but call the *db* async.
         """
@@ -122,7 +146,7 @@ class Unserializer(jsonapi.base.serializer.Unserializer):
             rels_object = resource_object["relationships"]
             for rel_name, rel_object in rels_object.items():
                 try:
-                    await self.update_relationship(db, resource, rel_name, rel_object)
+                    yield from self.update_relationship(db, resource, rel_name, rel_object)
                 except errors.Error as err:
                     error_list.append(err)
                 except errors.ErrorList as err:
@@ -132,7 +156,8 @@ class Unserializer(jsonapi.base.serializer.Unserializer):
             raise error_list
         return None
 
-    async def update_relationship(
+    @asyncio.coroutine
+    def update_relationship(
         self, db, resource, relationship_name, relationship_object
         ):
         """
@@ -151,7 +176,7 @@ class Unserializer(jsonapi.base.serializer.Unserializer):
                 relative = None
             else:
                 identifier = (identifier["type"], identifier["id"])
-                relative = await db.get(identifier, required=True)
+                relative = yield from db.get(identifier, required=True)
             relationship.set(resource, relative)
 
         # Update a *to-many* relationship
@@ -159,13 +184,14 @@ class Unserializer(jsonapi.base.serializer.Unserializer):
             identifiers = relationship_object["data"]
             identifiers = [(item["type"], item["id"]) for item in identifiers]
 
-            relatives = await db.get_many(identifiers, required=True)
+            relatives = yield from db.get_many(identifiers, required=True)
             relatives = list(relatives.values())
 
             relationship.set(resource, relatives)
         return None
 
-    async def extend_relationship(
+    @asyncio.coroutine
+    def extend_relationship(
         self, db, resource, relationship_name, relationship_object
         ):
         """
@@ -180,7 +206,7 @@ class Unserializer(jsonapi.base.serializer.Unserializer):
             identifiers = [(item["type"], item["id"]) for item in identifiers]
 
             # Load the new relatives.
-            relatives = await db.get_many(identifiers, required=True)
+            relatives = yield from db.get_many(identifiers, required=True)
             relatives = list(relatives.values())
 
             relationship.extend(resource, relatives)

@@ -3,8 +3,6 @@ Todo
 
 *   Implement the *bulk* extension
 
-*   Implement the asynchronous handlers
-
 *   Implement OAuth2 support
 
 *   Implement authorization (user session, OAuth2, ...)

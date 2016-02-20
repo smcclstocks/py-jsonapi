@@ -7,8 +7,8 @@ Blog API Client
     a short demonstration of *py-jsonapi*. Please read the full specification
     at http://jsonapi.org/format/ for more information.
 
-We use the `requests <http://docs.python-requests.org/en/master/>`_ library,
-which is available via PyPi.
+We use the `requests <http://docs.python-requests.org/en/master/>`_ library for
+the *http* requests. You can install it with *pip*.
 
 Creating Resources
 ------------------

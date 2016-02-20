@@ -52,6 +52,7 @@ from . import serializer
 
 
 __all__ = [
+    "build_uris",
     "API"
 ]
 
@@ -60,6 +61,32 @@ LOG = logging.getLogger(__file__)
 
 
 ARG_DEFAULT = []
+
+
+def build_uris(base_uri):
+    """
+    Returns a dictionary with the uri re(s) for each endpoint type (collection,
+    resource, related and relationships).
+
+    :arg str base_uri:
+    """
+    base_url = base_uri.rstrip("/")
+
+    collection = base_url + "/(?P<type>[A-z][A-z0-9]*)"
+    resource = collection + "/(?P<id>[A-z0-9]+)"
+    relationships = resource + "/relationships/(?P<relname>[A-z][A-z0-9]*)"
+    related = resource + "/(?P<relname>[A-z][A-z0-9]*)"
+
+    # Make the rules insensitive against a trailing "/"
+    collection = re.compile(collection + "/?")
+    resource = re.compile(resource + "/?")
+    relationships = re.compile(relationships + "/?")
+    related = re.compile(related + "/?")
+
+    return {
+        "collection": collection, "resource": resource,
+        "relationships": relationships, "related": related
+    }
 
 
 class API(object):
@@ -143,26 +170,16 @@ class API(object):
         Builds the regular expressions, which match the different endpoint
         types (collection, resource, related, relationships, ...) and adds
         them to :attr:`_routes`.
+
+        You may **override** this method, if you want to use other handlers
+        in your API.
         """
-        base_url = self._uri.rstrip("/")
-
-        collection = base_url + "/(?P<type>[A-z][A-z0-9]*)"
-        resource = collection + "/(?P<id>[A-z0-9]+)"
-        relationships = resource + "/relationships/(?P<relname>[A-z][A-z0-9]*)"
-        related = resource + "/(?P<relname>[A-z][A-z0-9]*)"
-
-        # Make the rules insensitive against a trailing "/"
-        collection = re.compile(collection + "/?")
-        resource = re.compile(resource + "/?")
-        relationships = re.compile(relationships + "/?")
-        related = re.compile(related + "/?")
-
-        # Add the routes.
+        uris = build_uris(self._uri)
         self._routes.extend([
-            (collection, handler.CollectionHandler),
-            (resource, handler.ResourceHandler),
-            (relationships, handler.RelationshipHandler),
-            (related, handler.RelatedHandler)
+            (uris["collection"], handler.CollectionHandler),
+            (uris["related"], handler.RelatedHandler),
+            (uris["resource"], handler.ResourceHandler),
+            (uris["relationships"], handler.RelationshipHandler)
         ])
         return None
 
@@ -368,14 +385,14 @@ class API(object):
         else:
             raise ValueError("Unknown endpoint type '{}'".format(endpoint))
 
-    def add_type(self, schema):
+    def add_type(self, schema, **kargs):
         """
         Adds the serializer to the API.
 
         :arg jsonapi.base.schema.Schema schema:
         """
-        serializer_ = serializer.Serializer(schema)
-        unserializer = serializer.Unserializer(schema)
+        serializer_ = kargs.get("serializer") or serializer.Serializer(schema)
+        unserializer = kargs.get("unserializer") or serializer.Unserializer(schema)
         resource_class = schema.resource_class
 
         self._typenames[schema.resource_class] = schema.typename

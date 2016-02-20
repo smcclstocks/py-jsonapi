@@ -1,16 +1,36 @@
 #!/usr/bin/env python3
 
+# The MIT License (MIT)
+#
+# Copyright (c) 2016 Benedikt Schmitt
+#
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to deal
+# in the Software without restriction, including without limitation the rights
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+#
+# The above copyright notice and this permission notice shall be included in all
+# copies or substantial portions of the Software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+# SOFTWARE.
+
 """
 jsonapi.asyncio.database
 ========================
 
-:license: GNU Affero General Public License v3
-
-Defines the interface for an asynchronous database session.
+Defines the interface for an asynchronous database adapters.
 """
 
 # std
-import asnycio
+import asyncio
 
 # local
 import jsonapi
@@ -19,65 +39,42 @@ from jsonapi.base.utilities import relative_identifiers
 
 
 __all__ = [
+    "Database",
     "Session"
 ]
+
+
+class Database(jsonapi.base.database.Database):
+    """
+    The same as the base database class, but you should inherit from this
+    class, because we may extend it in the future.
+    """
 
 
 class Session(jsonapi.base.database.Session):
     """
     The same as :class:`jsonapi.base.database.Session`, but some methods must
-    be coroutines.
+    return *awaitables*:
+
+    *   :meth:`query`
+    *   :meth:`query_size`
+    *   :meth:`get`
+    *   :meth:`get_many`
+    *   :meth:`commit`
+    *   :meth:`get_relatives`
     """
 
-    async def query(self, typename,
-        *, sorting=None, limit=None, offset=None, filters=None
-        ):
-        """
-        **Must be overridden**
-
-        :seealso: :meth:`jsonapi.base.database.Session.query`
-        """
-        raise NotImplementedError()
-
-    async def query_size(self, typename,
-        *, sorting=None, limit=None, offset=None, filters=None
-        ):
-        """
-        **Must be overridden**
-
-        :seealso: :meth:`jsonapi.base.database.Session.query_size`
-        """
-        raise NotImplementedError()
-
-    async def get(self, identifier, required=False):
-        """
-        **Must be overridden**
-
-        :seealso: :meth:`jsonapi.base.database.Session.get`
-        """
-        raise NotImplementedError()
-
-    async def get_many(self, identifiers, required=False):
-        """
-        **Must be overridden**
-
-        :seealso: :meth:`jsonapi.base.database.Session.get_many`
-        """
-        raise NotImplementedError()
-
-    async def commit(self):
-        """
-        **Must be overridden**
-
-        :seealso: :meth:`jsonapi.base.database.Session.commit`
-        """
-        raise NotImplementedError()
-
-    async def get_relatives(self, resources, paths):
+    @asyncio.coroutine
+    def get_relatives(self, resources, paths):
         """
         **May be overridden** for performance reasons.
 
-        :seealso: :meth:`jsonapi.base.database.Session.get_relatives`
+        Does the same as :meth:`jsonapi.base.database.Session.get_relatives`,
+        but asynchronous.
+
+        .. todo::
+
+            Fetch the different paths in *paths* parallel.
         """
         all_relatives = dict()
         root_resources = resources
@@ -96,7 +93,7 @@ class Session(jsonapi.base.database.Session):
                         relids.update(tmp)
 
                 # Query the relatives from the database.
-                relatives = await self.get_many(relids, required=True)
+                relatives = yield from self.get_many(relids, required=True)
                 all_relatives.update(relatives)
 
                 # The next relationship name in the path is defined on the

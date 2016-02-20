@@ -1,11 +1,34 @@
 #!/usr/bin/env python3
 
+# The MIT License (MIT)
+#
+# Copyright (c) 2016 Benedikt Schmitt
+#
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to deal
+# in the Software without restriction, including without limitation the rights
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+#
+# The above copyright notice and this permission notice shall be included in all
+# copies or substantial portions of the Software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+# SOFTWARE.
+
 """
 jsonapi.asyncio.handler.base
 ============================
-
-:license: GNU Affero General Public License v3
 """
+
+# std
+import asyncio
 
 # local
 from jsonapi.base.response import Response
@@ -36,47 +59,53 @@ class BaseHandler(object):
         """
         return None
 
-    async def handle(self):
+    def handle(self):
         """
-        Handles a requested.
+        Handles a requested and returns a asyncio.Future.
         """
         if self.request.method == "head":
-            return await self.head()
+            return asyncio.ensure_future(self.head())
         elif self.request.method == "get":
-            return await self.get()
+            return asyncio.ensure_future(self.get())
         elif self.request.method == "post":
-            return await self.post()
+            return asyncio.ensure_future(self.post())
         elif self.request.method == "patch":
-            return await self.patch()
+            return asyncio.ensure_future(self.patch())
         elif self.request.method == "delete":
-            return await self.delete()
-        raise MethodNotAllowed()
+            return asyncio.ensure_future(self.delete())
+        else:
+            raise MethodNotAllowed()
 
-    async def head(self):
+    @asyncio.coroutine
+    def head(self):
         """
         Handles a HEAD request.
         """
         raise MethodNotAllowed()
 
-    async def get(self):
+    @asyncio.coroutine
+    def get(self):
         """
         Handles a GET request.
         """
         raise MethodNotAllowed()
 
-    async def post(self):
+    @asyncio.coroutine
+    def post(self):
         """
         Handles a POST request.
         """
         raise MethodNotAllowed()
 
-    async def patch(self):
+    @asyncio.coroutine
+    def patch(self):
         """
         Handles a PATCH request.
         """
         raise MethodNotAllowed()
 
-    async def delete(self):
+    @asyncio.coroutine
+    def delete(self):
         """
         Handles a DELETE request.
         """
