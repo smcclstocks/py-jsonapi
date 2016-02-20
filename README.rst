@@ -18,7 +18,7 @@ has built in support for many web frameworks and database drivers:
 Furthermore, it can be extended to work with **all web frameworks and database
 engines**.
 
-But that's not all: We support **blocking and (soon) asynchronous** code.
+But that's not all: We support **blocking and asynchronous** code.
 
 
 Docs
