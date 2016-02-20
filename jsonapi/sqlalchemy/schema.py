@@ -175,14 +175,6 @@ class ToManyRelationship(jsonapi.base.schema.ToManyRelationship):
         relatives.extend(new_relatives)
         return None
 
-    def remove(self, resource, relative):
-        relatives = self.class_attr.__get__(resource)
-        try:
-            relatives.remove(relative)
-        except ValueError:
-            pass
-        return None
-
 
 class Schema(jsonapi.base.schema.Schema):
     """

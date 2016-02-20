@@ -288,12 +288,6 @@ class to_many_relationship(BaseMarker, jsonapi.base.schema.ToManyRelationship):
                 self._comments.append(comment)
                 return None
 
-            @comments.remover
-            def remove_comment(self, comment):
-                if comment in self._comments:
-                    self._comments.remove(comment)
-                return None
-
     :seealso: :class:`ToOneRelationship`
 
     :arg fget:
@@ -303,8 +297,6 @@ class to_many_relationship(BaseMarker, jsonapi.base.schema.ToManyRelationship):
         A function used for adding a new object to the relationship.
     :arg fextend:
         A funtion used to add a list of objects to the relationship.
-    :arg frem:
-        A function used to remove an object from the relationship.
     :arg doc:
     :arg name:
     """
@@ -333,13 +325,6 @@ class to_many_relationship(BaseMarker, jsonapi.base.schema.ToManyRelationship):
         self.fextend = f
         return f
 
-    def remover(self, f):
-        """
-        Descriptor to change the :attr:`frem` function.
-        """
-        self.frem = f
-        return f
-
     def add(self, resource, relative):
         return self.fadd(resource, relative)
 
@@ -348,9 +333,6 @@ class to_many_relationship(BaseMarker, jsonapi.base.schema.ToManyRelationship):
             return self.fextend(resource, relatives)
         else:
             return super().extend(resource, relatives)
-
-    def remove(self, resource, relative):
-        return self.frem(resource, relative)
 
 
 # Construction

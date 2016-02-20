@@ -1,6 +1,16 @@
 Changelog
 =========
 
+*   0.3.0b0
+
+    *   Removed the *remove()* method from the *to-many* relationship
+        descriptor, because it is not needed.
+
+*   0.2.1b0 - 0.2.6b0
+
+    *   Added asyncio support
+    *   Added motorengine
+
 *   0.2.0b0
 
     *   The bulk database is now an extension

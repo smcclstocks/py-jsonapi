@@ -208,9 +208,6 @@ class ToManyRelationship(jsonapi.base.schema.ToManyRelationship):
     def extend(self, resource, relatives):
         self.me_field.__get__(resource, None).extend(relatives)
 
-    def remove(self, resource, relative):
-        return self.me_field.__get__(resource, None).remove(relative)
-
 
 class Schema(jsonapi.base.schema.Schema):
     """

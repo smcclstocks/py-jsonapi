@@ -187,14 +187,6 @@ class ToManyRelationship(BaseRelationship):
             self.add(resource, relative)
         return None
 
-    def remove(self, resource, relative):
-        """
-        **Must be overridden**
-
-        Removes the *relative* from the relationship.
-        """
-        raise NotImplementedError()
-
     def clear(self, resource):
         """
         **Can be overridden**

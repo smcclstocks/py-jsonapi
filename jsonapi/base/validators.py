@@ -32,7 +32,7 @@ creates a verbose error with a *source-pointer*.
 
 All validators only assert the correct document structure, e.g.: An identifier
 object must contain an *id* and a *type* attribute. However, the validator
-does not check, if the type is correct.
+does not check, if the type is correct or even exists.
 
 .. seealso::
 

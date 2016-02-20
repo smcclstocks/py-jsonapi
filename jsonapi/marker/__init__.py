@@ -88,10 +88,10 @@ you must use the *to_one_relationship* decorator.
 
 If you want to mark a *to-many* relationship, which returns a *list* of
 related resources, you must use the *to_many_relationship* decorator. However, a
-*to-many* relationship also requires an *adder* and *remover*:
+*to-many* relationship also requires an *adder*:
 
 .. literalinclude:: ../../examples/marker/tutorial.py
-    :lines: 78-115
+    :lines: 78-101
 
 Creating the schema
 ~~~~~~~~~~~~~~~~~~~
@@ -100,7 +100,7 @@ The *Post* model is now complete and we want to create the serializer based on
 our markup:
 
 .. literalinclude:: ../../examples/marker/tutorial.py
-    :lines: 118
+    :lines: 104
 
 API
 ---

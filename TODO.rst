@@ -3,8 +3,6 @@ Todo
 
 *   Implement the *bulk* extension
 
-*   Implement OAuth2 support
-
 *   Implement authorization (user session, OAuth2, ...)
 
 *   Support client generated ids.

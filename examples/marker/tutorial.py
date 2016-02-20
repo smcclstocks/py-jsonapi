@@ -78,9 +78,8 @@ class Post(object):
     @jsonapi.marker.property.to_many_relationship()
     def comments(self):
         """
-        Defining a *to-many* relationship requires a bit more effort. If it
-        is writeable, you will have to define an *adder* and a *remover* in
-        addition to the *setter*.
+        Defining a *to-many* relationship requires a bit more effort. You must
+        define an *adder* in addition to the *setter*.
         """
         return self._comments
 
@@ -99,19 +98,6 @@ class Post(object):
         """
         assert isinstance(comment, Comment)
         self._comments.append(comment)
-        return None
-
-    @comments.remover
-    def remove_comment(self, comment):
-        """
-        We also must define a *remover*. If the comment is in the relationship,
-        it will be removed. Otherwise nothing happens.
-        """
-        assert isinstance(comment, Comment)
-        try:
-            self._comments.remove(comment)
-        except ValueError:
-            pass
         return None
 
 
