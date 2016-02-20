@@ -52,9 +52,12 @@ setup(
         "jsonapi",
         "jsonapi.base",
         "jsonapi.base.handler",
+        "jsonapi.asyncio",
+        "jsonapi.asyncio.handler",
         "jsonapi.flask",
         "jsonapi.marker",
         "jsonapi.mongoengine",
+        "jsonapi.motorengine",
         "jsonapi.sqlalchemy",
         "jsonapi.tornado"
     ],
